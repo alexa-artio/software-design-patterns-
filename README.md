@@ -6,6 +6,20 @@ LEGACY CODE ARCHAEOLOGY
 - Build collaborative problem-solving skills
 - Prepare for afternoon presentations
 
+**Scenario:**
+"You've just joined a team maintaining a legacy e-commerce system. The previous developer left no documentation. Your task: find the patterns hidden in this code, document them, and present your findings."
+
+**Team formation:**
+- Groups of 3-4 people
+- Mix experience levels if possible
+- Each team gets a different code module
+
+**What to look for:**
+1. Pattern name (what pattern is this?)
+2. Participants (which classes/interfaces play which roles?)
+3. Quality assessment (is it implemented correctly? Any issues?)
+4. Improvement suggestions (could it be better?)
+
 **Team 1: Payment Processing System**
 
 ```java
