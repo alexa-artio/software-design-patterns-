@@ -1,0 +1,417 @@
+**LAB 1 — Builder + Factory**
+Solution summary
+
+Introduce an immutable Report with a nested Report.Builder.
+
+Use a ReportRendererFactory to select a ReportRenderer (PDF/HTML/Excel) based on request format.
+
+Client code no longer contains conditional rendering logic.
+
+Builder performs cross-cutting validation and eliminates telescoping constructors/string flags.
+
+Reference implementation
+ReportRequest.java
+public final class ReportRequest {
+    public final String type;     // e.g., "SALES", "INVENTORY"
+    public final String format;   // e.g., "PDF", "HTML", "EXCEL"
+    public final boolean charts;
+    public final boolean footer;
+
+    public ReportRequest(String type, String format, boolean charts, boolean footer) {
+        this.type = type;
+        this.format = format;
+        this.charts = charts;
+        this.footer = footer;
+    }
+}
+
+Report.java (Immutable + Builder)
+import java.util.Objects;
+
+public final class Report {
+    private final String type;
+    private final boolean charts;
+    private final boolean footer;
+
+    private Report(Builder b) {
+        this.type = b.type;
+        this.charts = b.charts;
+        this.footer = b.footer;
+    }
+
+    public String type() { return type; }
+    public boolean charts() { return charts; }
+    public boolean footer() { return footer; }
+
+    public static Builder builder(String type) {
+        return new Builder(type);
+    }
+
+    public static final class Builder {
+        private final String type;
+        private boolean charts;
+        private boolean footer;
+
+        private Builder(String type) {
+            this.type = Objects.requireNonNull(type, "type must not be null").trim();
+            if (this.type.isEmpty()) throw new IllegalArgumentException("type must not be blank");
+        }
+
+        public Builder withCharts(boolean enabled) {
+            this.charts = enabled;
+            return this;
+        }
+
+        public Builder withFooter(boolean enabled) {
+            this.footer = enabled;
+            return this;
+        }
+
+        public Report build() {
+            // Cross-cutting validation example:
+            // Charts only allowed for SALES reports (illustrative)
+            if (charts && !type.equalsIgnoreCase("SALES")) {
+                throw new IllegalStateException("Charts are only supported for SALES reports");
+            }
+            return new Report(this);
+        }
+    }
+}
+
+ReportRenderer.java + implementations
+public interface ReportRenderer {
+    byte[] render(Report report);
+    String format(); // "PDF", "HTML", "EXCEL"
+}
+
+import java.nio.charset.StandardCharsets;
+
+public final class PdfRenderer implements ReportRenderer {
+    @Override public byte[] render(Report report) {
+        return ("PDF(" + report.type() + ", charts=" + report.charts() + ", footer=" + report.footer() + ")")
+                .getBytes(StandardCharsets.UTF_8);
+    }
+    @Override public String format() { return "PDF"; }
+}
+
+import java.nio.charset.StandardCharsets;
+
+public final class HtmlRenderer implements ReportRenderer {
+    @Override public byte[] render(Report report) {
+        return ("<html><body>HTML " + report.type() + "</body></html>").getBytes(StandardCharsets.UTF_8);
+    }
+    @Override public String format() { return "HTML"; }
+}
+
+import java.nio.charset.StandardCharsets;
+
+public final class ExcelRenderer implements ReportRenderer {
+    @Override public byte[] render(Report report) {
+        return ("EXCEL(" + report.type() + ")").getBytes(StandardCharsets.UTF_8);
+    }
+    @Override public String format() { return "EXCEL"; }
+}
+
+ReportRendererFactory.java
+import java.util.Locale;
+
+public final class ReportRendererFactory {
+    public ReportRenderer create(String format) {
+        String f = format == null ? "" : format.trim().toUpperCase(Locale.ROOT);
+        return switch (f) {
+            case "PDF" -> new PdfRenderer();
+            case "HTML" -> new HtmlRenderer();
+            case "EXCEL", "XLSX" -> new ExcelRenderer();
+            default -> throw new IllegalArgumentException("Unsupported format: " + format);
+        };
+    }
+}
+
+Client usage (no conditional logic)
+public final class ReportService {
+    private final ReportRendererFactory rendererFactory = new ReportRendererFactory();
+
+    public byte[] generate(ReportRequest req) {
+        Report report = Report.builder(req.type)
+                .withCharts(req.charts)
+                .withFooter(req.footer)
+                .build();
+
+        ReportRenderer renderer = rendererFactory.create(req.format);
+        return renderer.render(report);
+    }
+}
+
+**LAB 2 — Abstract Factory**
+Solution summary
+
+Define product interfaces: DatabaseClient, MessageBus, ObjectStorage.
+
+Provide one factory per cloud family (AWS/Azure).
+
+Application code depends only on InfrastructureFactory and product interfaces.
+
+“Swapping cloud = swapping factory” is achieved by changing the factory wiring (config/DI), not code.
+
+Family consistency is enforced because all products come from the same factory.
+
+Reference implementation
+Product interfaces
+public interface DatabaseClient {
+    void connect();
+    String provider();
+}
+
+public interface MessageBus {
+    void publish(String topic, String payload);
+    String provider();
+}
+
+public interface ObjectStorage {
+    void put(String key, byte[] data);
+    String provider();
+}
+
+Abstract factory
+public interface InfrastructureFactory {
+    DatabaseClient database();
+    MessageBus messageBus();
+    ObjectStorage storage();
+}
+
+AWS family
+public final class AwsInfrastructureFactory implements InfrastructureFactory {
+    @Override public DatabaseClient database() { return new AwsRdsClient(); }
+    @Override public MessageBus messageBus() { return new AwsSnsBus(); }
+    @Override public ObjectStorage storage() { return new AwsS3Storage(); }
+}
+
+final class AwsRdsClient implements DatabaseClient {
+    @Override public void connect() {}
+    @Override public String provider() { return "AWS-RDS"; }
+}
+
+final class AwsSnsBus implements MessageBus {
+    @Override public void publish(String topic, String payload) {}
+    @Override public String provider() { return "AWS-SNS"; }
+}
+
+final class AwsS3Storage implements ObjectStorage {
+    @Override public void put(String key, byte[] data) {}
+    @Override public String provider() { return "AWS-S3"; }
+}
+
+Azure family
+public final class AzureInfrastructureFactory implements InfrastructureFactory {
+    @Override public DatabaseClient database() { return new AzureSqlClient(); }
+    @Override public MessageBus messageBus() { return new AzureServiceBus(); }
+    @Override public ObjectStorage storage() { return new AzureBlobStorage(); }
+}
+
+final class AzureSqlClient implements DatabaseClient {
+    @Override public void connect() {}
+    @Override public String provider() { return "AZURE-SQL"; }
+}
+
+final class AzureServiceBus implements MessageBus {
+    @Override public void publish(String topic, String payload) {}
+    @Override public String provider() { return "AZURE-SERVICEBUS"; }
+}
+
+final class AzureBlobStorage implements ObjectStorage {
+    @Override public void put(String key, byte[] data) {}
+    @Override public String provider() { return "AZURE-BLOB"; }
+}
+
+Application code: no new
+public final class App {
+    private final DatabaseClient db;
+    private final MessageBus bus;
+    private final ObjectStorage storage;
+
+    public App(InfrastructureFactory factory) {
+        this.db = factory.database();
+        this.bus = factory.messageBus();
+        this.storage = factory.storage();
+    }
+
+    public void run() {
+        db.connect();
+        storage.put("health", new byte[]{1});
+        bus.publish("events", "started");
+    }
+}
+
+Swap cloud by swapping factory wiring
+public final class Bootstrap {
+    public static App createApp(String cloud) {
+        InfrastructureFactory factory = switch (cloud.toUpperCase()) {
+            case "AWS" -> new AwsInfrastructureFactory();
+            case "AZURE" -> new AzureInfrastructureFactory();
+            default -> throw new IllegalArgumentException("Unknown cloud: " + cloud);
+        };
+        return new App(factory);
+    }
+}
+
+
+
+**LAB 3 — Prototype**
+
+Solution summary
+
+Implement deep cloning in ServiceTemplate.
+
+Create a prototype registry that stores baseline templates and returns clones.
+
+Demonstrate performance improvement by comparing expensive build vs clone.
+
+Reference implementation
+ServiceTemplate.java (deep clone)
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+
+public class ServiceTemplate implements Cloneable {
+    private Map<String, String> config;
+
+    public ServiceTemplate(Map<String, String> config) {
+        this.config = new HashMap<>(Objects.requireNonNull(config));
+    }
+
+    public void customise(String key, String value) {
+        config.put(key, value);
+    }
+
+    public Map<String, String> configView() {
+        return Map.copyOf(config);
+    }
+
+    @Override
+    public ServiceTemplate clone() {
+        // Deep copy of mutable state
+        return new ServiceTemplate(new HashMap<>(this.config));
+    }
+}
+
+PrototypeRegistry.java
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+public final class PrototypeRegistry {
+    private final Map<String, ServiceTemplate> templates = new ConcurrentHashMap<>();
+
+    public void register(String name, ServiceTemplate prototype) {
+        templates.put(name, prototype);
+    }
+
+    public ServiceTemplate create(String name) {
+        ServiceTemplate proto = templates.get(name);
+        if (proto == null) throw new IllegalArgumentException("No prototype registered: " + name);
+        return proto.clone();
+    }
+}
+
+Performance demo scaffold
+import java.util.Map;
+
+public final class PrototypeDemo {
+    // Simulate expensive instantiation
+    static ServiceTemplate expensiveCreate() {
+        try { Thread.sleep(300); } catch (InterruptedException ignored) {}
+        return new ServiceTemplate(Map.of("region", "eu-west-2", "tier", "standard"));
+    }
+
+    public static void main(String[] args) {
+        PrototypeRegistry registry = new PrototypeRegistry();
+
+        long t0 = System.currentTimeMillis();
+        ServiceTemplate base = expensiveCreate();
+        long t1 = System.currentTimeMillis();
+        registry.register("baseline", base);
+
+        long t2 = System.currentTimeMillis();
+        ServiceTemplate a = registry.create("baseline");
+        a.customise("tenant", "A");
+        ServiceTemplate b = registry.create("baseline");
+        b.customise("tenant", "B");
+        long t3 = System.currentTimeMillis();
+
+        System.out.println("Expensive create ms: " + (t1 - t0));
+        System.out.println("Clone+customise ms: " + (t3 - t2));
+    }
+}
+
+**LAB 4 — Removing Singleton with DI **
+
+Solution summary
+
+Convert singleton usage into a normal class.
+
+Preserve single-instance semantics via composition root (manual DI) or container config.
+
+Demonstrate testability by injecting a mock.
+
+Reference implementation
+MetricsClient.java (normal class)
+public class MetricsClient {
+    public void record(String metric) {
+        // send metric to backend
+    }
+}
+
+“Before” singleton (for teaching context only)
+// Not used in solution. Provided for contrast.
+public final class Metrics {
+    private static final MetricsClient INSTANCE = new MetricsClient();
+    public static MetricsClient get() { return INSTANCE; }
+}
+
+Application component with explicit dependency
+import java.util.Objects;
+
+public final class CheckoutService {
+    private final MetricsClient metrics;
+
+    public CheckoutService(MetricsClient metrics) {
+        this.metrics = Objects.requireNonNull(metrics);
+    }
+
+    public void checkout() {
+        metrics.record("checkout.started");
+        // business logic...
+        metrics.record("checkout.completed");
+    }
+}
+
+Composition root: enforce single instance without global state
+public final class CompositionRoot {
+    private final MetricsClient metricsClient = new MetricsClient(); // single instance
+
+    public CheckoutService checkoutService() {
+        return new CheckoutService(metricsClient);
+    }
+}
+
+Testability: inject a mock/fake
+import java.util.ArrayList;
+import java.util.List;
+
+final class FakeMetricsClient extends MetricsClient {
+    final List<String> recorded = new ArrayList<>();
+    @Override public void record(String metric) { recorded.add(metric); }
+}
+
+public final class CheckoutServiceTest {
+    public static void main(String[] args) {
+        FakeMetricsClient fake = new FakeMetricsClient();
+        CheckoutService svc = new CheckoutService(fake);
+
+        svc.checkout();
+
+        if (!fake.recorded.contains("checkout.started") || !fake.recorded.contains("checkout.completed")) {
+            throw new AssertionError("Expected metrics were not recorded");
+        }
+        System.out.println("Test passed");
+    }
+}
