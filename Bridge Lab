@@ -1,0 +1,888 @@
+/**
+ * =============================================================================
+ * LAB 2: BRIDGE PATTERN — Multi-Format Report Generator
+ * =============================================================================
+ * 
+ * REAL-WORLD SCENARIO:
+ * You're building a reporting system for a company. They need different types
+ * of reports (Financial, HR, Sales) and each report must be exportable in
+ * multiple formats (PDF, HTML, CSV). How do you design this?
+ * 
+ * THE PROBLEM: CLASS EXPLOSION
+ * ┌─────────────────────────────────────────────────────────────────────────┐
+ * │  WITHOUT Bridge Pattern (inheritance approach):                         │
+ * │                                                                         │
+ * │  Report Types:  Financial, HR                                           │
+ * │  Formats:       PDF, HTML, CSV                                          │
+ * │                                                                         │
+ * │  Classes needed: 2 × 3 = 6 classes!                                     │
+ * │    • FinancialPDFReport                                                 │
+ * │    • FinancialHTMLReport                                                │
+ * │    • FinancialCSVReport                                                 │
+ * │    • HRPDFReport                                                        │
+ * │    • HRHTMLReport                                                       │
+ * │    • HRCSVReport                                                        │
+ * │                                                                         │
+ * │  Add 1 new report type? → Add 3 more classes (one per format)           │
+ * │  Add 1 new format?      → Add 2 more classes (one per report type)      │
+ * │                                                                         │
+ * │  This grows as N × M — EXPLOSION! 💥                                    │
+ * └─────────────────────────────────────────────────────────────────────────┘
+ * 
+ * THE SOLUTION: BRIDGE PATTERN
+ * ┌─────────────────────────────────────────────────────────────────────────┐
+ * │  Separate the TWO dimensions that vary independently:                   │
+ * │                                                                         │
+ * │  ABSTRACTION (What)          IMPLEMENTATION (How)                       │
+ * │  ─────────────────           ────────────────────                       │
+ * │  • FinancialReport    ───▶   • PDFRenderer                              │
+ * │  • HRReport           ───▶   • HTMLRenderer                             │
+ * │                       ───▶   • CSVRenderer                              │
+ * │                                                                         │
+ * │  Classes needed: 2 + 3 = 5 classes                                      │
+ * │                                                                         │
+ * │  Add 1 new report type? → Add 1 class                                   │
+ * │  Add 1 new format?      → Add 1 class                                   │
+ * │                                                                         │
+ * │  This grows as N + M — LINEAR! ✓                                        │
+ * └─────────────────────────────────────────────────────────────────────────┘
+ * 
+ * HOW THE BRIDGE WORKS:
+ * 
+ *        ABSTRACTION                              IMPLEMENTATION
+ *     (Report Types)                              (Renderers)
+ *                                    
+ *     ┌───────────┐                               ┌─────────────┐
+ *     │  Report   │─────────── has-a ───────────▶│  Renderer   │
+ *     │ (abstract)│                               │ (interface) │
+ *     └─────┬─────┘                               └──────┬──────┘
+ *           │                                            │
+ *     ┌─────┴─────┐                          ┌──────────┼──────────┐
+ *     │           │                          │          │          │
+ * ┌───┴───┐   ┌───┴───┐               ┌──────┴──┐ ┌─────┴───┐ ┌────┴────┐
+ * │Finance│   │  HR   │               │   PDF   │ │  HTML   │ │   CSV   │
+ * │Report │   │Report │               │Renderer │ │Renderer │ │Renderer │
+ * └───────┘   └───────┘               └─────────┘ └─────────┘ └─────────┘
+ * 
+ *     The "bridge" is the reference from Report to Renderer!
+ *     Any Report can use ANY Renderer at runtime.
+ * 
+ * =============================================================================
+ * 
+ * YOUR TASK:
+ * Complete the Renderer implementations and Report classes (look for "TODO")
+ * 
+ * EXPECTED OUTPUT:
+ * ───────────────────────────────────────────────────────
+ * Financial Report in HTML format generated successfully
+ * HR Report in CSV format generated successfully
+ * Total classes: 5 (not 6!)
+ * ───────────────────────────────────────────────────────
+ * 
+ * =============================================================================
+ */
+
+import java.util.*;
+import java.text.NumberFormat;
+
+public class Lab2_BridgePattern_ReportGenerator {
+
+    // =========================================================================
+    // STEP 1: THE IMPLEMENTATION INTERFACE (Renderer)
+    // =========================================================================
+    // This defines HOW reports are rendered. Each renderer outputs a 
+    // different format, but they all have the same interface.
+    // =========================================================================
+    
+    /**
+     * The "Implementation" side of the bridge.
+     * All renderers must implement this interface.
+     */
+    interface ReportRenderer {
+        /**
+         * Renders report content in a specific format.
+         * 
+         * @param title  The report title
+         * @param headers  Column headers for the data
+         * @param rows  Data rows (each row is a list of values)
+         * @param footer  Optional footer text (e.g., totals, summary)
+         * @return  Formatted report as a String
+         */
+        String render(String title, 
+                      List<String> headers, 
+                      List<List<String>> rows, 
+                      String footer);
+        
+        /**
+         * Returns the format name (for display purposes)
+         */
+        String getFormatName();
+    }
+
+    // =========================================================================
+    // STEP 2: CONCRETE IMPLEMENTATIONS (Renderers)
+    // =========================================================================
+    // Implement three different renderers. Each one formats data differently.
+    // =========================================================================
+    
+    /**
+     * Renders reports as HTML tables.
+     * 
+     * OUTPUT EXAMPLE:
+     * <html>
+     * <head><title>Sales Report</title></head>
+     * <body>
+     * <h1>Sales Report</h1>
+     * <table border="1">
+     * <tr><th>Product</th><th>Amount</th></tr>
+     * <tr><td>Widget</td><td>$100</td></tr>
+     * </table>
+     * <p>Total: $100</p>
+     * </body>
+     * </html>
+     */
+    static class HTMLRenderer implements ReportRenderer {
+        
+        @Override
+        public String render(String title, 
+                            List<String> headers, 
+                            List<List<String>> rows, 
+                            String footer) {
+            
+            StringBuilder html = new StringBuilder();
+            
+            // =================================================================
+            // TODO: Build the HTML structure
+            // =================================================================
+            // 
+            // HINT: Start with the document structure:
+            //   html.append("<html>\n");
+            //   html.append("<head><title>").append(title).append("</title></head>\n");
+            //   html.append("<body>\n");
+            //
+            // HINT: Add the title as an <h1>:
+            //   html.append("<h1>").append(title).append("</h1>\n");
+            //
+            // HINT: Create a table with border:
+            //   html.append("<table border=\"1\">\n");
+            //
+            // HINT: Add header row with <th> tags:
+            //   html.append("<tr>");
+            //   for (String header : headers) {
+            //       html.append("<th>").append(header).append("</th>");
+            //   }
+            //   html.append("</tr>\n");
+            //
+            // HINT: Add data rows with <td> tags:
+            //   for (List<String> row : rows) {
+            //       html.append("<tr>");
+            //       for (String cell : row) {
+            //           html.append("<td>").append(cell).append("</td>");
+            //       }
+            //       html.append("</tr>\n");
+            //   }
+            //
+            // HINT: Close the table and add footer:
+            //   html.append("</table>\n");
+            //   if (footer != null && !footer.isEmpty()) {
+            //       html.append("<p><strong>").append(footer).append("</strong></p>\n");
+            //   }
+            //   html.append("</body>\n</html>");
+            // =================================================================
+            
+            // YOUR CODE HERE:
+            
+            
+            return html.toString();
+        }
+        
+        @Override
+        public String getFormatName() {
+            return "HTML";
+        }
+    }
+    
+    /**
+     * Renders reports as CSV (Comma-Separated Values).
+     * 
+     * OUTPUT EXAMPLE:
+     * "Sales Report"
+     * "Product","Amount"
+     * "Widget","$100"
+     * "Total: $100"
+     */
+    static class CSVRenderer implements ReportRenderer {
+        
+        @Override
+        public String render(String title, 
+                            List<String> headers, 
+                            List<List<String>> rows, 
+                            String footer) {
+            
+            StringBuilder csv = new StringBuilder();
+            
+            // =================================================================
+            // TODO: Build the CSV structure
+            // =================================================================
+            //
+            // HINT: Add title as first line (quoted):
+            //   csv.append("\"").append(title).append("\"\n");
+            //
+            // HINT: Add headers (quoted, comma-separated):
+            //   csv.append(headers.stream()
+            //       .map(h -> "\"" + h + "\"")
+            //       .collect(Collectors.joining(","))); 
+            //   csv.append("\n");
+            //
+            // Or use a simple loop:
+            //   for (int i = 0; i < headers.size(); i++) {
+            //       if (i > 0) csv.append(",");
+            //       csv.append("\"").append(headers.get(i)).append("\"");
+            //   }
+            //   csv.append("\n");
+            //
+            // HINT: Add data rows the same way:
+            //   for (List<String> row : rows) {
+            //       for (int i = 0; i < row.size(); i++) {
+            //           if (i > 0) csv.append(",");
+            //           csv.append("\"").append(row.get(i)).append("\"");
+            //       }
+            //       csv.append("\n");
+            //   }
+            //
+            // HINT: Add footer if present:
+            //   if (footer != null && !footer.isEmpty()) {
+            //       csv.append("\"").append(footer).append("\"\n");
+            //   }
+            // =================================================================
+            
+            // YOUR CODE HERE:
+            
+            
+            return csv.toString();
+        }
+        
+        @Override
+        public String getFormatName() {
+            return "CSV";
+        }
+    }
+    
+    /**
+     * Renders reports as plain text (simulating PDF output).
+     * 
+     * OUTPUT EXAMPLE:
+     * ════════════════════════════════════════
+     *            SALES REPORT
+     * ════════════════════════════════════════
+     * Product          Amount
+     * ────────────────────────────────────────
+     * Widget           $100
+     * ────────────────────────────────────────
+     * Total: $100
+     * ════════════════════════════════════════
+     */
+    static class PDFRenderer implements ReportRenderer {
+        
+        @Override
+        public String render(String title, 
+                            List<String> headers, 
+                            List<List<String>> rows, 
+                            String footer) {
+            
+            StringBuilder pdf = new StringBuilder();
+            int width = 50;  // Fixed width for formatting
+            
+            // =================================================================
+            // TODO: Build the PDF-style structure
+            // =================================================================
+            //
+            // HINT: Add top border:
+            //   pdf.append("═".repeat(width)).append("\n");
+            //
+            // HINT: Add centered title:
+            //   String paddedTitle = centerText(title.toUpperCase(), width);
+            //   pdf.append(paddedTitle).append("\n");
+            //   pdf.append("═".repeat(width)).append("\n");
+            //
+            // HINT: Add headers (use fixed-width columns):
+            //   for (String header : headers) {
+            //       pdf.append(String.format("%-20s", header));
+            //   }
+            //   pdf.append("\n");
+            //   pdf.append("─".repeat(width)).append("\n");
+            //
+            // HINT: Add data rows:
+            //   for (List<String> row : rows) {
+            //       for (String cell : row) {
+            //           pdf.append(String.format("%-20s", cell));
+            //       }
+            //       pdf.append("\n");
+            //   }
+            //
+            // HINT: Add footer:
+            //   pdf.append("─".repeat(width)).append("\n");
+            //   if (footer != null && !footer.isEmpty()) {
+            //       pdf.append(footer).append("\n");
+            //   }
+            //   pdf.append("═".repeat(width)).append("\n");
+            // =================================================================
+            
+            // YOUR CODE HERE:
+            
+            
+            return pdf.toString();
+        }
+        
+        // Helper method to center text
+        private String centerText(String text, int width) {
+            if (text.length() >= width) return text;
+            int padding = (width - text.length()) / 2;
+            return " ".repeat(padding) + text;
+        }
+        
+        @Override
+        public String getFormatName() {
+            return "PDF";
+        }
+    }
+
+    // =========================================================================
+    // STEP 3: THE ABSTRACTION (Report base class)
+    // =========================================================================
+    // This defines WHAT reports contain. Each report type adds its own
+    // specific data processing, but delegates rendering to the bridge.
+    // =========================================================================
+    
+    /**
+     * The "Abstraction" side of the bridge.
+     * This class holds a reference to a Renderer (the "bridge").
+     * Subclasses define WHAT data the report contains.
+     * The Renderer decides HOW to format that data.
+     */
+    static abstract class Report {
+        
+        // THE BRIDGE! This reference connects abstraction to implementation
+        protected final ReportRenderer renderer;
+        
+        protected String title;
+        protected List<String> headers = new ArrayList<>();
+        protected List<List<String>> rows = new ArrayList<>();
+        
+        /**
+         * Constructor takes a Renderer - this is dependency injection!
+         * The report doesn't know which renderer it will use until runtime.
+         */
+        protected Report(ReportRenderer renderer) {
+            this.renderer = renderer;
+        }
+        
+        /**
+         * Sets the report title
+         */
+        public void setTitle(String title) {
+            this.title = title;
+        }
+        
+        /**
+         * Template method: prepares data and delegates rendering.
+         * Subclasses override prepareData() to customize content.
+         */
+        public final String generate() {
+            // Step 1: Prepare report-specific data (implemented by subclasses)
+            prepareData();
+            
+            // Step 2: Create footer (implemented by subclasses)
+            String footer = createFooter();
+            
+            // Step 3: Delegate to renderer (THE BRIDGE IN ACTION!)
+            return renderer.render(title, headers, rows, footer);
+        }
+        
+        /**
+         * Subclasses override this to set up their specific headers and data
+         */
+        protected abstract void prepareData();
+        
+        /**
+         * Subclasses override this to create their specific footer
+         */
+        protected abstract String createFooter();
+        
+        /**
+         * Helper: Add a row of data
+         */
+        protected void addRow(String... values) {
+            rows.add(Arrays.asList(values));
+        }
+        
+        /**
+         * Get the renderer's format name (for display)
+         */
+        public String getFormatName() {
+            return renderer.getFormatName();
+        }
+    }
+
+    // =========================================================================
+    // STEP 4: REFINED ABSTRACTIONS (Concrete Report Types)
+    // =========================================================================
+    // Each report type has its own data structure and formatting needs.
+    // But they ALL delegate rendering to the injected Renderer.
+    // =========================================================================
+    
+    /**
+     * Financial Report - shows revenue, expenses, profit.
+     * Adds currency formatting to all monetary values.
+     */
+    static class FinancialReport extends Report {
+        
+        private double revenue = 0;
+        private double expenses = 0;
+        private List<String[]> lineItems = new ArrayList<>();
+        
+        public FinancialReport(ReportRenderer renderer) {
+            super(renderer);
+            this.title = "Financial Report";
+        }
+        
+        /**
+         * Add a financial line item
+         */
+        public void addLineItem(String category, String description, double amount) {
+            lineItems.add(new String[]{category, description, String.valueOf(amount)});
+            if (amount > 0) {
+                revenue += amount;
+            } else {
+                expenses += Math.abs(amount);
+            }
+        }
+        
+        @Override
+        protected void prepareData() {
+            // =================================================================
+            // TODO: Set up financial report headers and data
+            // =================================================================
+            //
+            // HINT: Set up headers for a financial report:
+            //   headers.clear();
+            //   headers.add("Category");
+            //   headers.add("Description");
+            //   headers.add("Amount");
+            //
+            // HINT: Add line items as rows with currency formatting:
+            //   rows.clear();
+            //   NumberFormat currency = NumberFormat.getCurrencyInstance();
+            //   for (String[] item : lineItems) {
+            //       double amount = Double.parseDouble(item[2]);
+            //       addRow(item[0], item[1], currency.format(amount));
+            //   }
+            // =================================================================
+            
+            // YOUR CODE HERE:
+            
+        }
+        
+        @Override
+        protected String createFooter() {
+            // =================================================================
+            // TODO: Create financial summary footer
+            // =================================================================
+            //
+            // HINT: Format the summary with currency:
+            //   NumberFormat currency = NumberFormat.getCurrencyInstance();
+            //   double profit = revenue - expenses;
+            //   return String.format("Revenue: %s | Expenses: %s | Profit: %s",
+            //       currency.format(revenue),
+            //       currency.format(expenses),
+            //       currency.format(profit));
+            // =================================================================
+            
+            // YOUR CODE HERE:
+            return "";
+        }
+    }
+    
+    /**
+     * HR Report - shows employee information by department.
+     * Includes headcount metrics.
+     */
+    static class HRReport extends Report {
+        
+        private List<String[]> employees = new ArrayList<>();
+        private Map<String, Integer> departmentCounts = new HashMap<>();
+        
+        public HRReport(ReportRenderer renderer) {
+            super(renderer);
+            this.title = "HR Report";
+        }
+        
+        /**
+         * Add an employee to the report
+         */
+        public void addEmployee(String name, String department, String position, int yearsOfService) {
+            employees.add(new String[]{name, department, position, String.valueOf(yearsOfService)});
+            departmentCounts.merge(department, 1, Integer::sum);
+        }
+        
+        @Override
+        protected void prepareData() {
+            // =================================================================
+            // TODO: Set up HR report headers and data
+            // =================================================================
+            //
+            // HINT: Set up headers for an HR report:
+            //   headers.clear();
+            //   headers.add("Employee Name");
+            //   headers.add("Department");
+            //   headers.add("Position");
+            //   headers.add("Years of Service");
+            //
+            // HINT: Sort employees by department, then add rows:
+            //   rows.clear();
+            //   employees.sort((a, b) -> a[1].compareTo(b[1]));  // Sort by dept
+            //   for (String[] emp : employees) {
+            //       addRow(emp[0], emp[1], emp[2], emp[3] + " years");
+            //   }
+            // =================================================================
+            
+            // YOUR CODE HERE:
+            
+        }
+        
+        @Override
+        protected String createFooter() {
+            // =================================================================
+            // TODO: Create HR summary footer with headcount
+            // =================================================================
+            //
+            // HINT: Build department summary:
+            //   StringBuilder footer = new StringBuilder();
+            //   footer.append("Total Employees: ").append(employees.size());
+            //   footer.append(" | By Department: ");
+            //   departmentCounts.forEach((dept, count) -> 
+            //       footer.append(dept).append("=").append(count).append(" "));
+            //   return footer.toString();
+            // =================================================================
+            
+            // YOUR CODE HERE:
+            return "";
+        }
+    }
+
+    // =========================================================================
+    // STEP 5: TEST YOUR SOLUTION
+    // =========================================================================
+    
+    public static void main(String[] args) {
+        System.out.println("=".repeat(70));
+        System.out.println("LAB 2: BRIDGE PATTERN - Multi-Format Report Generator");
+        System.out.println("=".repeat(70));
+        
+        // ─────────────────────────────────────────────────────────────────────
+        // Test 1: Financial Report in HTML format
+        // ─────────────────────────────────────────────────────────────────────
+        System.out.println("\n>>> Test 1: Financial Report → HTML\n");
+        
+        // Create a Financial Report with an HTML Renderer (THE BRIDGE!)
+        FinancialReport financialReport = new FinancialReport(new HTMLRenderer());
+        financialReport.setTitle("Q4 2024 Financial Report");
+        
+        // Add some financial data
+        financialReport.addLineItem("Revenue", "Product Sales", 150000.00);
+        financialReport.addLineItem("Revenue", "Service Fees", 45000.00);
+        financialReport.addLineItem("Expense", "Salaries", -80000.00);
+        financialReport.addLineItem("Expense", "Marketing", -25000.00);
+        financialReport.addLineItem("Expense", "Operations", -15000.00);
+        
+        // Generate and display
+        String htmlOutput = financialReport.generate();
+        System.out.println("Generated " + financialReport.getFormatName() + " output:");
+        System.out.println(htmlOutput);
+        
+        // ─────────────────────────────────────────────────────────────────────
+        // Test 2: HR Report in CSV format
+        // ─────────────────────────────────────────────────────────────────────
+        System.out.println("\n>>> Test 2: HR Report → CSV\n");
+        
+        // Create an HR Report with a CSV Renderer (THE BRIDGE!)
+        HRReport hrReport = new HRReport(new CSVRenderer());
+        hrReport.setTitle("Employee Directory 2024");
+        
+        // Add some employee data
+        hrReport.addEmployee("Alice Johnson", "Engineering", "Senior Developer", 5);
+        hrReport.addEmployee("Bob Smith", "Engineering", "Tech Lead", 8);
+        hrReport.addEmployee("Carol White", "Marketing", "Marketing Manager", 3);
+        hrReport.addEmployee("David Brown", "Sales", "Sales Rep", 2);
+        hrReport.addEmployee("Eve Davis", "Engineering", "Junior Developer", 1);
+        
+        // Generate and display
+        String csvOutput = hrReport.generate();
+        System.out.println("Generated " + hrReport.getFormatName() + " output:");
+        System.out.println(csvOutput);
+        
+        // ─────────────────────────────────────────────────────────────────────
+        // Test 3: Same Financial Report in PDF format (reusing report type!)
+        // ─────────────────────────────────────────────────────────────────────
+        System.out.println("\n>>> Test 3: Financial Report → PDF (same data, different format!)\n");
+        
+        // Create ANOTHER Financial Report but with PDF Renderer
+        FinancialReport financialPdf = new FinancialReport(new PDFRenderer());
+        financialPdf.setTitle("Q4 2024 Financial Report");
+        financialPdf.addLineItem("Revenue", "Product Sales", 150000.00);
+        financialPdf.addLineItem("Revenue", "Service Fees", 45000.00);
+        financialPdf.addLineItem("Expense", "Salaries", -80000.00);
+        financialPdf.addLineItem("Expense", "Marketing", -25000.00);
+        
+        String pdfOutput = financialPdf.generate();
+        System.out.println("Generated " + financialPdf.getFormatName() + " output:");
+        System.out.println(pdfOutput);
+        
+        // ─────────────────────────────────────────────────────────────────────
+        // Verify class count (the point of Bridge Pattern!)
+        // ─────────────────────────────────────────────────────────────────────
+        System.out.println("\n>>> CLASS COUNT VERIFICATION\n");
+        System.out.println("┌────────────────────────────────────────────────────────┐");
+        System.out.println("│  IMPLEMENTATION CLASSES (Renderers):                   │");
+        System.out.println("│    1. HTMLRenderer                                     │");
+        System.out.println("│    2. CSVRenderer                                      │");
+        System.out.println("│    3. PDFRenderer                                      │");
+        System.out.println("│                                                        │");
+        System.out.println("│  ABSTRACTION CLASSES (Reports):                        │");
+        System.out.println("│    4. FinancialReport                                  │");
+        System.out.println("│    5. HRReport                                         │");
+        System.out.println("│                                                        │");
+        System.out.println("│  TOTAL: 5 classes (not 6!)                             │");
+        System.out.println("│                                                        │");
+        System.out.println("│  Without Bridge: 2 reports × 3 formats = 6 classes     │");
+        System.out.println("│  With Bridge:    2 reports + 3 formats = 5 classes     │");
+        System.out.println("│                                                        │");
+        System.out.println("│  Add 1 more report type? Just +1 class (not +3)        │");
+        System.out.println("│  Add 1 more format?      Just +1 class (not +2)        │");
+        System.out.println("└────────────────────────────────────────────────────────┘");
+        
+        // ─────────────────────────────────────────────────────────────────────
+        // Summary
+        // ─────────────────────────────────────────────────────────────────────
+        System.out.println("\n" + "=".repeat(70));
+        System.out.println("KEY LEARNING POINTS:");
+        System.out.println("-".repeat(70));
+        System.out.println("• Bridge separates WHAT (abstraction) from HOW (implementation)");
+        System.out.println("• Report types can vary independently from rendering formats");
+        System.out.println("• Adding new report types doesn't require new renderer code");
+        System.out.println("• Adding new formats doesn't require new report code");
+        System.out.println("• The 'bridge' is the reference from Report to Renderer");
+        System.out.println("• Composition (has-a) beats inheritance (is-a) for flexibility");
+        System.out.println("=".repeat(70));
+    }
+}
+
+
+// =============================================================================
+// =============================================================================
+//                              SOLUTION BELOW
+//                    (Try to solve it yourself first!)
+// =============================================================================
+// =============================================================================
+
+/*
+ * ═══════════════════════════════════════════════════════════════════════════
+ * SOLUTION: HTMLRenderer.render()
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 
+ * @Override
+ * public String render(String title, 
+ *                     List<String> headers, 
+ *                     List<List<String>> rows, 
+ *                     String footer) {
+ *     
+ *     StringBuilder html = new StringBuilder();
+ *     
+ *     // Document structure
+ *     html.append("<html>\n");
+ *     html.append("<head><title>").append(title).append("</title></head>\n");
+ *     html.append("<body>\n");
+ *     
+ *     // Title
+ *     html.append("<h1>").append(title).append("</h1>\n");
+ *     
+ *     // Table
+ *     html.append("<table border=\"1\">\n");
+ *     
+ *     // Headers
+ *     html.append("<tr>");
+ *     for (String header : headers) {
+ *         html.append("<th>").append(header).append("</th>");
+ *     }
+ *     html.append("</tr>\n");
+ *     
+ *     // Data rows
+ *     for (List<String> row : rows) {
+ *         html.append("<tr>");
+ *         for (String cell : row) {
+ *             html.append("<td>").append(cell).append("</td>");
+ *         }
+ *         html.append("</tr>\n");
+ *     }
+ *     
+ *     html.append("</table>\n");
+ *     
+ *     // Footer
+ *     if (footer != null && !footer.isEmpty()) {
+ *         html.append("<p><strong>").append(footer).append("</strong></p>\n");
+ *     }
+ *     
+ *     html.append("</body>\n</html>");
+ *     
+ *     return html.toString();
+ * }
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════
+ * SOLUTION: CSVRenderer.render()
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 
+ * @Override
+ * public String render(String title, 
+ *                     List<String> headers, 
+ *                     List<List<String>> rows, 
+ *                     String footer) {
+ *     
+ *     StringBuilder csv = new StringBuilder();
+ *     
+ *     // Title
+ *     csv.append("\"").append(title).append("\"\n");
+ *     
+ *     // Headers
+ *     for (int i = 0; i < headers.size(); i++) {
+ *         if (i > 0) csv.append(",");
+ *         csv.append("\"").append(headers.get(i)).append("\"");
+ *     }
+ *     csv.append("\n");
+ *     
+ *     // Data rows
+ *     for (List<String> row : rows) {
+ *         for (int i = 0; i < row.size(); i++) {
+ *             if (i > 0) csv.append(",");
+ *             csv.append("\"").append(row.get(i)).append("\"");
+ *         }
+ *         csv.append("\n");
+ *     }
+ *     
+ *     // Footer
+ *     if (footer != null && !footer.isEmpty()) {
+ *         csv.append("\"").append(footer).append("\"\n");
+ *     }
+ *     
+ *     return csv.toString();
+ * }
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════
+ * SOLUTION: PDFRenderer.render()
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 
+ * @Override
+ * public String render(String title, 
+ *                     List<String> headers, 
+ *                     List<List<String>> rows, 
+ *                     String footer) {
+ *     
+ *     StringBuilder pdf = new StringBuilder();
+ *     int width = 50;
+ *     
+ *     // Top border
+ *     pdf.append("═".repeat(width)).append("\n");
+ *     
+ *     // Centered title
+ *     String paddedTitle = centerText(title.toUpperCase(), width);
+ *     pdf.append(paddedTitle).append("\n");
+ *     pdf.append("═".repeat(width)).append("\n");
+ *     
+ *     // Headers
+ *     for (String header : headers) {
+ *         pdf.append(String.format("%-20s", header));
+ *     }
+ *     pdf.append("\n");
+ *     pdf.append("─".repeat(width)).append("\n");
+ *     
+ *     // Data rows
+ *     for (List<String> row : rows) {
+ *         for (String cell : row) {
+ *             pdf.append(String.format("%-20s", cell));
+ *         }
+ *         pdf.append("\n");
+ *     }
+ *     
+ *     // Footer
+ *     pdf.append("─".repeat(width)).append("\n");
+ *     if (footer != null && !footer.isEmpty()) {
+ *         pdf.append(footer).append("\n");
+ *     }
+ *     pdf.append("═".repeat(width)).append("\n");
+ *     
+ *     return pdf.toString();
+ * }
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════
+ * SOLUTION: FinancialReport.prepareData() and createFooter()
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 
+ * @Override
+ * protected void prepareData() {
+ *     headers.clear();
+ *     headers.add("Category");
+ *     headers.add("Description");
+ *     headers.add("Amount");
+ *     
+ *     rows.clear();
+ *     NumberFormat currency = NumberFormat.getCurrencyInstance();
+ *     for (String[] item : lineItems) {
+ *         double amount = Double.parseDouble(item[2]);
+ *         addRow(item[0], item[1], currency.format(amount));
+ *     }
+ * }
+ * 
+ * @Override
+ * protected String createFooter() {
+ *     NumberFormat currency = NumberFormat.getCurrencyInstance();
+ *     double profit = revenue - expenses;
+ *     return String.format("Revenue: %s | Expenses: %s | Profit: %s",
+ *         currency.format(revenue),
+ *         currency.format(expenses),
+ *         currency.format(profit));
+ * }
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════
+ * SOLUTION: HRReport.prepareData() and createFooter()
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 
+ * @Override
+ * protected void prepareData() {
+ *     headers.clear();
+ *     headers.add("Employee Name");
+ *     headers.add("Department");
+ *     headers.add("Position");
+ *     headers.add("Years of Service");
+ *     
+ *     rows.clear();
+ *     employees.sort((a, b) -> a[1].compareTo(b[1]));  // Sort by department
+ *     for (String[] emp : employees) {
+ *         addRow(emp[0], emp[1], emp[2], emp[3] + " years");
+ *     }
+ * }
+ * 
+ * @Override
+ * protected String createFooter() {
+ *     StringBuilder footer = new StringBuilder();
+ *     footer.append("Total Employees: ").append(employees.size());
+ *     footer.append(" | By Department: ");
+ *     departmentCounts.forEach((dept, count) -> 
+ *         footer.append(dept).append("=").append(count).append(" "));
+ *     return footer.toString();
+ * }
+ * 
+ */
+
+//    - Returns a Map<String, String> with format name → output
+//    - This demonstrates combining Bridge with other patterns
+//
+// =============================================================================
