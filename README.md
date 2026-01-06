@@ -1,4 +1,4 @@
-# software-design-patterns-
+# software-design-patterns-labs
 
 ## Purpose
 - Apply pattern recognition to realistic code
