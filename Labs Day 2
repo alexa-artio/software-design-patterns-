@@ -118,47 +118,548 @@ Task
 * Demonstrate prototype registry
 * Show performance improvement
 
-LAB 4 — Removing Singleton with DI (Advanced)
-Decoupling Lifecycle from Usage
-Problem
-Global state:
-* Hard to test
-* Hidden dependencies
-* Order-dependent bugs
-Goal
-* Remove Singleton
-* Externalise lifecycle
-* Preserve single-instance semantics via DI
-Starter Code
 
-```
-public class MetricsClient {
-    public void record(String metric) {}
+/**
+ * =============================================================================
+ * LAB 4 (ADVANCED): REMOVING SINGLETON WITH DEPENDENCY INJECTION
+ * Decoupling Lifecycle from Usage
+ * =============================================================================
+ * 
+ * PROBLEM:
+ * Global state (Singleton) causes:
+ *   • Hard to test - can't substitute mock implementations
+ *   • Hidden dependencies - classes secretly depend on global state
+ *   • Order-dependent bugs - initialization order matters
+ *   • Tight coupling - can't vary implementation
+ * 
+ * GOAL:
+ *   • Remove Singleton pattern
+ *   • Externalize lifecycle management
+ *   • Preserve single-instance semantics via DI container
+ *   • Enable easy testing with mocks
+ * 
+ * STEPS:
+ * 1. See the problematic Singleton version
+ * 2. Extract interface for abstraction
+ * 3. Convert to injectable dependency
+ * 4. Create a simple DI container
+ * 5. Demonstrate testability improvements
+ * 
+ * =============================================================================
+ */
+
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.function.Supplier;
+
+public class Lab4_Advanced_RemovingSingletonWithDI {
+
+    // =========================================================================
+    // PART 1: THE PROBLEMATIC SINGLETON VERSION
+    // =========================================================================
+    
+    /**
+     * PROBLEM: This Singleton has several issues:
+     * - Global state that's hard to reset between tests
+     * - Hidden dependency - classes using it don't declare the dependency
+     * - Can't substitute a mock for testing
+     * - Can't have different configurations in different contexts
+     */
+    static class MetricsClientSingleton {
+        private static final MetricsClientSingleton INSTANCE = new MetricsClientSingleton();
+        
+        private final List<String> recordedMetrics = new ArrayList<>();
+        private final String endpoint;
+        
+        private MetricsClientSingleton() {
+            this.endpoint = "https://metrics.production.com/v1";
+            System.out.println("[SINGLETON] MetricsClient initialized with: " + endpoint);
+        }
+        
+        public static MetricsClientSingleton getInstance() {
+            return INSTANCE;
+        }
+        
+        public void record(String metric, double value) {
+            String entry = metric + "=" + value;
+            recordedMetrics.add(entry);
+            System.out.println("[SINGLETON] Recorded: " + entry + " -> " + endpoint);
+        }
+        
+        public List<String> getRecordedMetrics() {
+            return new ArrayList<>(recordedMetrics);
+        }
+        
+        // PROBLEM: No way to reset for tests without reflection hacks!
+    }
+    
+    /**
+     * Service that uses the Singleton - HIDDEN DEPENDENCY!
+     * Looking at the constructor, you can't tell this class needs MetricsClient.
+     */
+    static class OrderServiceWithSingleton {
+        
+        public void processOrder(String orderId, double amount) {
+            System.out.println("Processing order: " + orderId);
+            
+            // Hidden dependency - not visible in constructor!
+            MetricsClientSingleton.getInstance().record("order.processed", 1);
+            MetricsClientSingleton.getInstance().record("order.amount", amount);
+            
+            System.out.println("Order completed: " + orderId);
+        }
+    }
+    
+    // =========================================================================
+    // PART 2: THE SOLUTION - INTERFACE + DEPENDENCY INJECTION
+    // =========================================================================
+    
+    /**
+     * Step 1: Extract an interface
+     * This allows us to substitute implementations (real vs mock)
+     */
+    interface MetricsClient {
+        void record(String metric, double value);
+        void recordCount(String metric);
+        void recordTiming(String metric, long milliseconds);
+        List<String> getRecordedMetrics();
+    }
+    
+    /**
+     * Step 2: Production implementation - just a regular class now!
+     * No more Singleton pattern - lifecycle managed externally.
+     */
+    static class ProductionMetricsClient implements MetricsClient {
+        private final String endpoint;
+        private final List<String> recordedMetrics = Collections.synchronizedList(new ArrayList<>());
+        
+        // Constructor injection - dependencies are explicit!
+        public ProductionMetricsClient(String endpoint) {
+            this.endpoint = endpoint;
+            System.out.println("[PRODUCTION] MetricsClient initialized with: " + endpoint);
+        }
+        
+        @Override
+        public void record(String metric, double value) {
+            String entry = metric + "=" + value;
+            recordedMetrics.add(entry);
+            System.out.println("[PRODUCTION] Recorded: " + entry + " -> " + endpoint);
+            // In real code: HTTP POST to metrics service
+        }
+        
+        @Override
+        public void recordCount(String metric) {
+            record(metric, 1.0);
+        }
+        
+        @Override
+        public void recordTiming(String metric, long milliseconds) {
+            record(metric + ".ms", milliseconds);
+        }
+        
+        @Override
+        public List<String> getRecordedMetrics() {
+            return new ArrayList<>(recordedMetrics);
+        }
+    }
+    
+    /**
+     * Step 3: Mock implementation for testing
+     * No network calls, easy to inspect, easy to reset
+     */
+    static class MockMetricsClient implements MetricsClient {
+        private final List<String> recordedMetrics = new ArrayList<>();
+        private boolean shouldFail = false;
+        
+        @Override
+        public void record(String metric, double value) {
+            if (shouldFail) {
+                throw new RuntimeException("Simulated metrics failure");
+            }
+            String entry = metric + "=" + value;
+            recordedMetrics.add(entry);
+            System.out.println("[MOCK] Recorded: " + entry);
+        }
+        
+        @Override
+        public void recordCount(String metric) {
+            record(metric, 1.0);
+        }
+        
+        @Override
+        public void recordTiming(String metric, long milliseconds) {
+            record(metric + ".ms", milliseconds);
+        }
+        
+        @Override
+        public List<String> getRecordedMetrics() {
+            return new ArrayList<>(recordedMetrics);
+        }
+        
+        // Test helpers - not in interface!
+        public void reset() {
+            recordedMetrics.clear();
+        }
+        
+        public void setShouldFail(boolean shouldFail) {
+            this.shouldFail = shouldFail;
+        }
+        
+        public boolean wasMetricRecorded(String metricPrefix) {
+            return recordedMetrics.stream().anyMatch(m -> m.startsWith(metricPrefix));
+        }
+        
+        public int getRecordCount() {
+            return recordedMetrics.size();
+        }
+    }
+    
+    /**
+     * Step 4: Service with EXPLICIT dependency - Constructor Injection
+     * Now the dependency is visible and can be substituted!
+     */
+    static class OrderService {
+        private final MetricsClient metricsClient;
+        
+        // Dependency is explicit in constructor!
+        public OrderService(MetricsClient metricsClient) {
+            this.metricsClient = metricsClient;
+        }
+        
+        public void processOrder(String orderId, double amount) {
+            System.out.println("Processing order: " + orderId);
+            
+            long startTime = System.currentTimeMillis();
+            
+            // Use the injected dependency
+            metricsClient.recordCount("order.processed");
+            metricsClient.record("order.amount", amount);
+            
+            // Simulate some work
+            try { Thread.sleep(50); } catch (InterruptedException e) {}
+            
+            long duration = System.currentTimeMillis() - startTime;
+            metricsClient.recordTiming("order.processing", duration);
+            
+            System.out.println("Order completed: " + orderId);
+        }
+    }
+    
+    // =========================================================================
+    // PART 3: SIMPLE DI CONTAINER
+    // Manages lifecycle and provides single-instance semantics
+    // =========================================================================
+    
+    /**
+     * Simple DI Container that provides:
+     * - Singleton scope (one instance per container)
+     * - Prototype scope (new instance each time)
+     * - Type-safe registration and retrieval
+     */
+    static class DIContainer {
+        
+        enum Scope { SINGLETON, PROTOTYPE }
+        
+        private final Map<Class<?>, Supplier<?>> factories = new HashMap<>();
+        private final Map<Class<?>, Scope> scopes = new HashMap<>();
+        private final Map<Class<?>, Object> singletons = new ConcurrentHashMap<>();
+        
+        /**
+         * Register a type with a factory function
+         */
+        public <T> void register(Class<T> type, Supplier<T> factory, Scope scope) {
+            factories.put(type, factory);
+            scopes.put(type, scope);
+            System.out.println("[DI] Registered: " + type.getSimpleName() + " as " + scope);
+        }
+        
+        /**
+         * Register as singleton (convenience method)
+         */
+        public <T> void registerSingleton(Class<T> type, Supplier<T> factory) {
+            register(type, factory, Scope.SINGLETON);
+        }
+        
+        /**
+         * Register as prototype (convenience method)
+         */
+        public <T> void registerPrototype(Class<T> type, Supplier<T> factory) {
+            register(type, factory, Scope.PROTOTYPE);
+        }
+        
+        /**
+         * Register an existing instance as singleton
+         */
+        public <T> void registerInstance(Class<T> type, T instance) {
+            singletons.put(type, instance);
+            scopes.put(type, Scope.SINGLETON);
+            System.out.println("[DI] Registered instance: " + type.getSimpleName());
+        }
+        
+        /**
+         * Resolve a dependency
+         */
+        @SuppressWarnings("unchecked")
+        public <T> T resolve(Class<T> type) {
+            Scope scope = scopes.get(type);
+            
+            if (scope == null) {
+                throw new IllegalArgumentException("Type not registered: " + type.getSimpleName());
+            }
+            
+            if (scope == Scope.SINGLETON) {
+                return (T) singletons.computeIfAbsent(type, k -> {
+                    Supplier<?> factory = factories.get(k);
+                    if (factory == null) {
+                        throw new IllegalStateException("No factory for singleton: " + k.getSimpleName());
+                    }
+                    return factory.get();
+                });
+            } else {
+                Supplier<?> factory = factories.get(type);
+                if (factory == null) {
+                    throw new IllegalStateException("No factory for type: " + type.getSimpleName());
+                }
+                return (T) factory.get();
+            }
+        }
+        
+        /**
+         * Check if type is registered
+         */
+        public boolean isRegistered(Class<?> type) {
+            return scopes.containsKey(type);
+        }
+        
+        /**
+         * Clear all singletons (useful for testing)
+         */
+        public void clearSingletons() {
+            singletons.clear();
+            System.out.println("[DI] Cleared all singleton instances");
+        }
+    }
+    
+    // =========================================================================
+    // PART 4: APPLICATION COMPOSITION ROOT
+    // Single place where all dependencies are wired up
+    // =========================================================================
+    
+    /**
+     * Production configuration - wires up real implementations
+     */
+    static DIContainer createProductionContainer() {
+        DIContainer container = new DIContainer();
+        
+        // MetricsClient as singleton - one instance shared across app
+        container.registerSingleton(MetricsClient.class, () -> 
+            new ProductionMetricsClient("https://metrics.production.com/v1")
+        );
+        
+        // OrderService as prototype - new instance each time
+        // Note: it depends on MetricsClient, which is resolved from container
+        container.registerPrototype(OrderService.class, () -> 
+            new OrderService(container.resolve(MetricsClient.class))
+        );
+        
+        return container;
+    }
+    
+    /**
+     * Test configuration - wires up mock implementations
+     */
+    static DIContainer createTestContainer(MockMetricsClient mockMetrics) {
+        DIContainer container = new DIContainer();
+        
+        // Use the mock instead of real implementation
+        container.registerInstance(MetricsClient.class, mockMetrics);
+        
+        // OrderService still works - it just gets the mock
+        container.registerPrototype(OrderService.class, () -> 
+            new OrderService(container.resolve(MetricsClient.class))
+        );
+        
+        return container;
+    }
+    
+    // =========================================================================
+    // PART 5: TESTS DEMONSTRATING THE BENEFITS
+    // =========================================================================
+    
+    static class OrderServiceTest {
+        
+        static void testOrderProcessingRecordsMetrics() {
+            System.out.println("\n--- Test: Order processing records correct metrics ---");
+            
+            // Arrange: Create mock and container
+            MockMetricsClient mockMetrics = new MockMetricsClient();
+            DIContainer container = createTestContainer(mockMetrics);
+            OrderService orderService = container.resolve(OrderService.class);
+            
+            // Act: Process an order
+            orderService.processOrder("ORD-123", 99.99);
+            
+            // Assert: Check metrics were recorded
+            assert mockMetrics.wasMetricRecorded("order.processed") : 
+                "Should record order.processed metric";
+            assert mockMetrics.wasMetricRecorded("order.amount") : 
+                "Should record order.amount metric";
+            assert mockMetrics.wasMetricRecorded("order.processing.ms") : 
+                "Should record timing metric";
+            assert mockMetrics.getRecordCount() == 3 : 
+                "Should record exactly 3 metrics";
+            
+            System.out.println("✓ All assertions passed!");
+            System.out.println("  Recorded metrics: " + mockMetrics.getRecordedMetrics());
+        }
+        
+        static void testOrderProcessingHandlesMetricsFailure() {
+            System.out.println("\n--- Test: Order processing handles metrics failure ---");
+            
+            // Arrange: Create mock that will fail
+            MockMetricsClient mockMetrics = new MockMetricsClient();
+            mockMetrics.setShouldFail(true);
+            DIContainer container = createTestContainer(mockMetrics);
+            OrderService orderService = container.resolve(OrderService.class);
+            
+            // Act & Assert: Should throw when metrics fails
+            try {
+                orderService.processOrder("ORD-456", 50.00);
+                System.out.println("✗ Should have thrown exception!");
+            } catch (RuntimeException e) {
+                System.out.println("✓ Correctly threw exception: " + e.getMessage());
+            }
+        }
+        
+        static void testMultipleOrdersAccumulateMetrics() {
+            System.out.println("\n--- Test: Multiple orders accumulate metrics ---");
+            
+            // Arrange
+            MockMetricsClient mockMetrics = new MockMetricsClient();
+            DIContainer container = createTestContainer(mockMetrics);
+            OrderService orderService = container.resolve(OrderService.class);
+            
+            // Act: Process multiple orders
+            orderService.processOrder("ORD-001", 10.00);
+            orderService.processOrder("ORD-002", 20.00);
+            orderService.processOrder("ORD-003", 30.00);
+            
+            // Assert
+            assert mockMetrics.getRecordCount() == 9 : 
+                "Should record 9 metrics (3 per order)";
+            
+            System.out.println("✓ Test passed!");
+            System.out.println("  Total metrics recorded: " + mockMetrics.getRecordCount());
+        }
+        
+        static void testIsolationBetweenTests() {
+            System.out.println("\n--- Test: Tests are isolated (fresh mock each time) ---");
+            
+            // Test 1: Fresh mock
+            MockMetricsClient mock1 = new MockMetricsClient();
+            DIContainer container1 = createTestContainer(mock1);
+            OrderService service1 = container1.resolve(OrderService.class);
+            service1.processOrder("ORD-A", 100.00);
+            
+            // Test 2: Different fresh mock - completely isolated!
+            MockMetricsClient mock2 = new MockMetricsClient();
+            DIContainer container2 = createTestContainer(mock2);
+            OrderService service2 = container2.resolve(OrderService.class);
+            service2.processOrder("ORD-B", 200.00);
+            
+            // Each mock only saw its own test's metrics
+            assert mock1.getRecordCount() == 3 : "Mock 1 should have 3 metrics";
+            assert mock2.getRecordCount() == 3 : "Mock 2 should have 3 metrics";
+            
+            System.out.println("✓ Tests are properly isolated!");
+            System.out.println("  Mock 1 metrics: " + mock1.getRecordCount());
+            System.out.println("  Mock 2 metrics: " + mock2.getRecordCount());
+        }
+    }
+    
+    // =========================================================================
+    // MAIN - Demonstrate everything
+    // =========================================================================
+    
+    public static void main(String[] args) {
+        System.out.println("=".repeat(70));
+        System.out.println("LAB 4 (ADVANCED): REMOVING SINGLETON WITH DEPENDENCY INJECTION");
+        System.out.println("=".repeat(70));
+        
+        // -----------------------------------------------------------------
+        // Part 1: Show the Singleton Problem
+        // -----------------------------------------------------------------
+        System.out.println("\n>>> PART 1: The Singleton Problem");
+        System.out.println("-".repeat(50));
+        
+        System.out.println("\nUsing Singleton (hidden dependency):");
+        OrderServiceWithSingleton singletonService = new OrderServiceWithSingleton();
+        singletonService.processOrder("SING-001", 150.00);
+        
+        System.out.println("\nProblems with this approach:");
+        System.out.println("  • Can't tell OrderService needs MetricsClient from constructor");
+        System.out.println("  • Can't substitute a mock for testing");
+        System.out.println("  • Can't reset state between tests");
+        System.out.println("  • Metrics go to production endpoint even in tests!");
+        
+        // -----------------------------------------------------------------
+        // Part 2: Show the DI Solution
+        // -----------------------------------------------------------------
+        System.out.println("\n>>> PART 2: The DI Solution");
+        System.out.println("-".repeat(50));
+        
+        System.out.println("\nCreating production container:");
+        DIContainer prodContainer = createProductionContainer();
+        
+        System.out.println("\nResolving OrderService (gets production MetricsClient):");
+        OrderService prodService = prodContainer.resolve(OrderService.class);
+        prodService.processOrder("PROD-001", 250.00);
+        
+        System.out.println("\nVerifying singleton semantics:");
+        MetricsClient metrics1 = prodContainer.resolve(MetricsClient.class);
+        MetricsClient metrics2 = prodContainer.resolve(MetricsClient.class);
+        System.out.println("  Same instance? " + (metrics1 == metrics2));
+        System.out.println("  Hashcode 1: " + System.identityHashCode(metrics1));
+        System.out.println("  Hashcode 2: " + System.identityHashCode(metrics2));
+        
+        // -----------------------------------------------------------------
+        // Part 3: Run Tests
+        // -----------------------------------------------------------------
+        System.out.println("\n>>> PART 3: Running Tests (with Mocks)");
+        System.out.println("-".repeat(50));
+        
+        OrderServiceTest.testOrderProcessingRecordsMetrics();
+        OrderServiceTest.testOrderProcessingHandlesMetricsFailure();
+        OrderServiceTest.testMultipleOrdersAccumulateMetrics();
+        OrderServiceTest.testIsolationBetweenTests();
+        
+        // -----------------------------------------------------------------
+        // Summary: Before vs After
+        // -----------------------------------------------------------------
+        System.out.println("\n" + "=".repeat(70));
+        System.out.println("COMPARISON: SINGLETON vs DEPENDENCY INJECTION");
+        System.out.println("=".repeat(70));
+        
+        System.out.println("\n┌─────────────────────┬─────────────────────┬─────────────────────┐");
+        System.out.println("│ Aspect              │ Singleton           │ Dependency Injection│");
+        System.out.println("├─────────────────────┼─────────────────────┼─────────────────────┤");
+        System.out.println("│ Dependencies        │ Hidden (global)     │ Explicit (ctor)     │");
+        System.out.println("│ Testability         │ Hard (can't mock)   │ Easy (inject mock)  │");
+        System.out.println("│ Coupling            │ Tight               │ Loose               │");
+        System.out.println("│ Single instance     │ Enforced by class   │ Managed by container│");
+        System.out.println("│ Configuration       │ Fixed at compile    │ Flexible at runtime │");
+        System.out.println("│ Test isolation      │ Difficult           │ Natural             │");
+        System.out.println("└─────────────────────┴─────────────────────┴─────────────────────┘");
+        
+        System.out.println("\n" + "=".repeat(70));
+        System.out.println("KEY TAKEAWAYS:");
+        System.out.println("-".repeat(70));
+        System.out.println("1. Extract interface → enables substitution");
+        System.out.println("2. Constructor injection → makes dependencies explicit");
+        System.out.println("3. DI container → manages lifecycle externally");
+        System.out.println("4. Single-instance ≠ Singleton pattern");
+        System.out.println("5. Tests get fresh mocks → no shared global state");
+        System.out.println("=".repeat(70));
+    }
 }
 
-```
-
-Task
-* Convert Singleton to normal class
-* Introduce factory or container configuration
-* Demonstrate testability with mock injection
-PART 2 — GITHUB REPOSITORY STRUCTURE (CLEAN & TEACHABLE)
-Use this exact layout:
-
-```
-creational-patterns-labs/
-├── lab-01-builder-factory/
-│   ├── README.md
-│   └── src/main/java/...
-├── lab-02-abstract-factory/
-│   ├── README.md
-│   └── src/main/java/...
-├── lab-03-prototype/
-│   ├── README.md
-│   └── src/main/java/...
-├── lab-04-di-vs-singleton/
-│   ├── README.md
-│   └── src/main/java/...
-└── README.md
-
-```
