@@ -43,6 +43,7 @@ Task
 * Introduce `ReportRendererFactory`
 * Eliminate conditional logic from client code
 * Report must be immutable
+
 LAB 2 — Abstract Factory
 Enforcing Compatibility Across Families
 Problem
@@ -82,6 +83,7 @@ Task
 * No `new` in application code
 * Swapping cloud = swapping factory
 * Enforce family consistency
+
 LAB 3 — Prototype
 Eliminating Expensive Instantiation
 Problem
@@ -115,6 +117,7 @@ Task
 * Implement deep cloning
 * Demonstrate prototype registry
 * Show performance improvement
+
 LAB 4 — Removing Singleton with DI (Advanced)
 Decoupling Lifecycle from Usage
 Problem
