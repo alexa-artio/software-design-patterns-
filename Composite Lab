@@ -1,0 +1,95 @@
+File System Calculator Lab
+
+*Objective*
+Implement the Composite Design Pattern to build a file system representation. 
+The goal is to create a structure where individual files and nested directories are treated uniformly, 
+allowing you to calculate the total size of any folder regardless of its complexity.
+
+Design Pattern: Composite
+This lab utilizes the Composite Pattern to compose objects into tree structures to represent part-whole hierarchies.
+
+Component: FileSystemItem
+
+Leaf: File
+
+Composite: Directory
+
+*Instructions*
+Interface Definition: Create the FileSystemItem interface with getName() and getSize() methods.
+
+Leaf Implementation: Implement the File class to store a name and a fixed size in bytes.
+
+Composite Implementation: Implement the Directory class. It should maintain a collection of FileSystemItem objects.
+
+Recursive Calculation: The Directory.getSize() method must return the sum of all its contained items' sizes (recursively).
+
+Build the Hierarchy: Create the following structure:
+
+root
+
+documents
+
+report.pdf (2048 bytes)
+
+notes.txt (512 bytes)
+
+images
+
+photo.jpg (4096 bytes)
+
+
+Verification: Print the size of root, documents, and images to verify the recursive summation logic.
+
+
+*Expected Output :Plaintext*
+
+documents: 2560 bytes
+images: 4096 bytes
+root: 6656 bytes
+
+Starter Code
+Java
+
+import java.util.*;
+
+// Component interface
+interface FileSystemItem {
+    String getName();
+    long getSize();  // Size in bytes
+}
+
+// Leaf: represents a file
+class File implements FileSystemItem {
+    private final String name;
+    private final long size;
+    
+    public File(String name, long size) {
+        this.name = name;
+        this.size = size;
+    }
+    
+    // TODO: Implement getName() and getSize()
+}
+
+// Composite: represents a directory
+class Directory implements FileSystemItem {
+    private final String name;
+    private final List<FileSystemItem> contents = new ArrayList<>();
+    
+    public Directory(String name) {
+        this.name = name;
+    }
+    
+    public void add(FileSystemItem item) {
+        contents.add(item);
+    }
+    
+    // TODO: Implement getName() and getSize()
+    // getSize() should recursively sum all contents
+}
+
+public class Main {
+    public static void main(String[] args) {
+        // TODO: Build the structure and test
+    }
+}
