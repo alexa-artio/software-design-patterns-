@@ -821,32 +821,3 @@ public class Lab2_BridgePattern_ReportGenerator {
  *     
  *     return pdf.toString();
  * }
- * 
- * ═══════════════════════════════════════════════════════════════════════════
- * SOLUTION: FinancialReport.prepareData() and createFooter()
- * ═══════════════════════════════════════════════════════════════════════════
- * 
- * @Override
- * protected void prepareData() {
- *     headers.clear();
- *     headers.add("Category");
- *     headers.add("Description");
- *     headers.add("Amount");
- *     
- *     rows.clear();
- *     NumberFormat currency = NumberFormat.getCurrencyInstance();
- *     for (String[] item : lineItems) {
- *         double amount = Double.parseDouble(item[2]);
- *         addRow(item[0], item[1], currency.format(amount));
- *     }
- * }
- * 
- * @Override
- * protected String createFooter() {
- *     NumberFormat currency = NumberFormat.getCurrencyInstance();
- *     double profit = revenue - expenses;
- *     return String.format("Revenue: %s | Expenses: %s | Profit: %s",
- *         currency.format(revenue),
- *         currency.format(expenses),
- *         currency.format(profit));
- * }
