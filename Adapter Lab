@@ -1,0 +1,374 @@
+/**
+ * =============================================================================
+ * LAB 1: ADAPTER PATTERN — Payment Gateway Adapter
+ * =============================================================================
+ * 
+ * REAL-WORLD SCENARIO:
+ * You work at an e-commerce company that just acquired a startup. Your modern
+ * payment system expects a clean interface, but the startup uses a legacy
+ * credit card API with a completely different method signature. You need to
+ * integrate them WITHOUT modifying either system.
+ * 
+ * THE PROBLEM:
+ * ┌─────────────────────────────────────────────────────────────────────────┐
+ * │  YOUR SYSTEM expects:                                                   │
+ * │    processPayment(amount, currency, cardToken)                          │
+ * │                                                                         │
+ * │  LEGACY SYSTEM provides:                                                │
+ * │    chargeCreditCard(cardNumber, expiry, cvv, amountInCents)             │
+ * │                                                                         │
+ * │  These interfaces are INCOMPATIBLE!                                     │
+ * └─────────────────────────────────────────────────────────────────────────┘
+ * 
+ * THE SOLUTION: ADAPTER PATTERN
+ * Create a "translator" class that:
+ *   1. Implements the interface YOUR system expects
+ *   2. Internally converts and delegates to the LEGACY system
+ * 
+ * ┌──────────────┐       ┌──────────────────┐       ┌─────────────────┐
+ * │  Your Code   │ ───▶  │     ADAPTER      │ ───▶  │  Legacy System  │
+ * │              │       │   (translator)   │       │                 │
+ * │ Calls:       │       │ Converts:        │       │ Receives:       │
+ * │ processPayment│      │ • token → parts  │       │ chargeCreditCard│
+ * │              │       │ • dollars → cents│       │                 │
+ * └──────────────┘       └──────────────────┘       └─────────────────┘
+ * 
+ * =============================================================================
+ * 
+ * YOUR TASK:
+ * Complete the LegacyPaymentAdapter class (look for "TODO" comments)
+ * 
+ * EXPECTED OUTPUT:
+ * ───────────────────────────────────────────────────────
+ * Processing payment of $99.99 USD
+ * Legacy API: Charging 9999 cents to card 4111111111111111
+ * Payment successful!
+ * ───────────────────────────────────────────────────────
+ * 
+ * =============================================================================
+ */
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+
+public class Lab1_AdapterPattern_PaymentGateway {
+
+    // =========================================================================
+    // STEP 1: THE MODERN INTERFACE (Target)
+    // =========================================================================
+    // This is what YOUR system expects. All payment processors should 
+    // implement this interface. You CANNOT modify this.
+    // =========================================================================
+    
+    /**
+     * Modern payment processor interface.
+     * - Uses BigDecimal for precise money handling
+     * - Uses a secure token instead of raw card details
+     * - Returns a result object with success/failure info
+     */
+    interface ModernPaymentProcessor {
+        PaymentResult processPayment(BigDecimal amount, String currency, String cardToken);
+    }
+    
+    /**
+     * Result object returned by modern payment processors
+     */
+    static class PaymentResult {
+        private final boolean success;
+        private final String message;
+        private final String transactionId;
+        
+        public PaymentResult(boolean success, String message, String transactionId) {
+            this.success = success;
+            this.message = message;
+            this.transactionId = transactionId;
+        }
+        
+        // Factory methods for convenience
+        public static PaymentResult success(String transactionId) {
+            return new PaymentResult(true, "Payment successful", transactionId);
+        }
+        
+        public static PaymentResult failure(String reason) {
+            return new PaymentResult(false, reason, null);
+        }
+        
+        // Getters
+        public boolean isSuccess() { return success; }
+        public String getMessage() { return message; }
+        public String getTransactionId() { return transactionId; }
+        
+        @Override
+        public String toString() {
+            return success 
+                ? "SUCCESS: " + message + " (ID: " + transactionId + ")"
+                : "FAILED: " + message;
+        }
+    }
+
+    // =========================================================================
+    // STEP 2: THE LEGACY API (Adaptee)
+    // =========================================================================
+    // This is the OLD system you need to integrate. It works fine but has
+    // a completely different interface. You CANNOT modify this.
+    // =========================================================================
+    
+    /**
+     * Legacy credit card API from the acquired company.
+     * 
+     * DIFFERENCES FROM MODERN API:
+     * - Requires raw card details (number, expiry, cvv) instead of a token
+     * - Expects amount in CENTS (integer) not dollars (BigDecimal)
+     * - Returns a simple boolean instead of a result object
+     */
+    static class LegacyCreditCardAPI {
+        
+        /**
+         * Charges a credit card using the legacy system.
+         * 
+         * @param cardNumber  The 16-digit card number (e.g., "4111111111111111")
+         * @param expiry      Expiration date as MM/YY (e.g., "12/25")
+         * @param cvv         3-digit security code (e.g., "123")
+         * @param amountInCents  Amount to charge IN CENTS (e.g., 9999 for $99.99)
+         * @return true if charge succeeded, false otherwise
+         */
+        public boolean chargeCreditCard(String cardNumber, 
+                                        String expiry, 
+                                        String cvv, 
+                                        int amountInCents) {
+            // Simulate the legacy system processing
+            System.out.println("Legacy API: Charging " + amountInCents + 
+                               " cents to card " + cardNumber);
+            
+            // In real life, this would call the actual payment processor
+            // For this lab, we simulate success if amount > 0
+            return amountInCents > 0;
+        }
+    }
+
+    // =========================================================================
+    // STEP 3: THE ADAPTER (Your Task!)
+    // =========================================================================
+    // This is the "translator" that makes the legacy API work with the
+    // modern interface. Complete the TODOs below.
+    // =========================================================================
+    
+    /**
+     * Adapter that makes LegacyCreditCardAPI compatible with ModernPaymentProcessor.
+     * 
+     * WHAT THIS CLASS DOES:
+     * 1. Implements ModernPaymentProcessor (so your code can use it)
+     * 2. Wraps LegacyCreditCardAPI (delegates actual work to it)
+     * 3. Translates between the two interfaces
+     * 
+     * TRANSLATIONS NEEDED:
+     * ┌────────────────────────┬────────────────────────────────────────────┐
+     * │ Modern API receives    │ Legacy API needs                           │
+     * ├────────────────────────┼────────────────────────────────────────────┤
+     * │ cardToken              │ cardNumber, expiry, cvv (parsed from token)│
+     * │ amount (BigDecimal)    │ amountInCents (int)                        │
+     * │ returns PaymentResult  │ returns boolean                            │
+     * └────────────────────────┴────────────────────────────────────────────┘
+     */
+    static class LegacyPaymentAdapter implements ModernPaymentProcessor {
+        
+        // The legacy API we're adapting
+        private final LegacyCreditCardAPI legacyApi;
+        
+        /**
+         * Constructor - receives the legacy API to wrap
+         */
+        public LegacyPaymentAdapter(LegacyCreditCardAPI legacyApi) {
+            this.legacyApi = legacyApi;
+        }
+        
+        /**
+         * Implements the modern interface by delegating to the legacy API.
+         * 
+         * @param amount    Amount in dollars (e.g., 99.99)
+         * @param currency  Currency code (e.g., "USD") - not used by legacy API
+         * @param cardToken Token format: "cardNumber|expiry|cvv"
+         *                  Example: "4111111111111111|12/25|123"
+         */
+        @Override
+        public PaymentResult processPayment(BigDecimal amount, 
+                                            String currency, 
+                                            String cardToken) {
+            
+            // =================================================================
+            // TODO 1: Parse the card token
+            // =================================================================
+            // The token format is: "cardNumber|expiry|cvv"
+            // Example: "4111111111111111|12/25|123"
+            // 
+            // HINT: Use String.split("|") to separate the parts
+            // HINT: split() uses regex, so escape the pipe: split("\\|")
+            //
+            // String[] parts = cardToken.split("\\|");
+            // parts[0] = card number
+            // parts[1] = expiry
+            // parts[2] = cvv
+            // =================================================================
+            
+            String cardNumber = null;  // TODO: Extract from token
+            String expiry = null;      // TODO: Extract from token
+            String cvv = null;         // TODO: Extract from token
+            
+            // YOUR CODE HERE:
+            // String[] parts = ...
+            // cardNumber = ...
+            // expiry = ...
+            // cvv = ...
+            
+            
+            // =================================================================
+            // TODO 2: Convert dollars to cents
+            // =================================================================
+            // Legacy API expects cents (integer), but we receive dollars (BigDecimal)
+            // Example: $99.99 → 9999 cents
+            //
+            // HINT: Multiply by 100, then convert to int
+            // HINT: Use amount.multiply(new BigDecimal("100"))
+            // HINT: Use .intValue() to convert BigDecimal to int
+            // =================================================================
+            
+            int amountInCents = 0;  // TODO: Convert amount to cents
+            
+            // YOUR CODE HERE:
+            // amountInCents = ...
+            
+            
+            // =================================================================
+            // TODO 3: Call the legacy API
+            // =================================================================
+            // Now call legacyApi.chargeCreditCard() with the converted values
+            // Store the boolean result
+            // =================================================================
+            
+            boolean success = false;  // TODO: Call legacy API
+            
+            // YOUR CODE HERE:
+            // success = legacyApi.chargeCreditCard(...);
+            
+            
+            // =================================================================
+            // TODO 4: Convert the result
+            // =================================================================
+            // Legacy API returns boolean, but we need to return PaymentResult
+            // 
+            // If success: return PaymentResult.success("TXN-" + System.currentTimeMillis())
+            // If failure: return PaymentResult.failure("Payment declined")
+            // =================================================================
+            
+            // YOUR CODE HERE:
+            // if (success) {
+            //     return PaymentResult.success(...);
+            // } else {
+            //     return PaymentResult.failure(...);
+            // }
+            
+            return null;  // TODO: Replace with actual return
+        }
+    }
+
+    // =========================================================================
+    // STEP 4: TEST YOUR SOLUTION
+    // =========================================================================
+    
+    public static void main(String[] args) {
+        System.out.println("=".repeat(60));
+        System.out.println("LAB 1: ADAPTER PATTERN - Payment Gateway");
+        System.out.println("=".repeat(60));
+        
+        // Create the legacy API (this already exists, we can't change it)
+        LegacyCreditCardAPI legacyApi = new LegacyCreditCardAPI();
+        
+        // Create our adapter that wraps the legacy API
+        ModernPaymentProcessor paymentProcessor = new LegacyPaymentAdapter(legacyApi);
+        
+        // Now we can use the modern interface!
+        // Our code doesn't know (or care) that it's actually using the legacy API
+        
+        System.out.println("\n--- Test 1: Process a $99.99 payment ---\n");
+        
+        BigDecimal amount = new BigDecimal("99.99");
+        String currency = "USD";
+        String cardToken = "4111111111111111|12/25|123";  // Visa test card
+        
+        System.out.println("Processing payment of $" + amount + " " + currency);
+        PaymentResult result = paymentProcessor.processPayment(amount, currency, cardToken);
+        System.out.println("Result: " + result);
+        
+        // Verify the result
+        if (result != null && result.isSuccess()) {
+            System.out.println("\n✓ SUCCESS! Your adapter is working correctly.");
+        } else {
+            System.out.println("\n✗ FAILED. Check your adapter implementation.");
+        }
+        
+        // Additional tests
+        System.out.println("\n--- Test 2: Process a $0.01 payment (minimum) ---\n");
+        result = paymentProcessor.processPayment(
+            new BigDecimal("0.01"), 
+            "USD", 
+            "5555555555554444|06/26|456"  // Mastercard test card
+        );
+        System.out.println("Result: " + result);
+        
+        System.out.println("\n--- Test 3: Process a $1,234.56 payment ---\n");
+        result = paymentProcessor.processPayment(
+            new BigDecimal("1234.56"), 
+            "EUR", 
+            "378282246310005|09/27|7890"  // Amex test card
+        );
+        System.out.println("Result: " + result);
+        
+        System.out.println("\n" + "=".repeat(60));
+        System.out.println("KEY LEARNING POINTS:");
+        System.out.println("-".repeat(60));
+        System.out.println("• The Adapter implements the TARGET interface (ModernPaymentProcessor)");
+        System.out.println("• The Adapter wraps the ADAPTEE (LegacyCreditCardAPI)");
+        System.out.println("• The Adapter TRANSLATES between the two interfaces");
+        System.out.println("• Client code only sees the modern interface");
+        System.out.println("• Neither the client nor legacy code needed to change!");
+        System.out.println("=".repeat(60));
+    }
+}
+
+
+// =============================================================================
+// =============================================================================
+//                              SOLUTION BELOW
+//                    (Try to solve it yourself first!)
+// =============================================================================
+// =============================================================================
+
+/*
+ * COMPLETE SOLUTION - LegacyPaymentAdapter.processPayment():
+ * 
+ * @Override
+ * public PaymentResult processPayment(BigDecimal amount, 
+ *                                     String currency, 
+ *                                     String cardToken) {
+ *     
+ *     // TODO 1: Parse the card token
+ *     String[] parts = cardToken.split("\\|");
+ *     String cardNumber = parts[0];
+ *     String expiry = parts[1];
+ *     String cvv = parts[2];
+ *     
+ *     // TODO 2: Convert dollars to cents
+ *     int amountInCents = amount.multiply(new BigDecimal("100")).intValue();
+ *     
+ *     // TODO 3: Call the legacy API
+ *     boolean success = legacyApi.chargeCreditCard(cardNumber, expiry, cvv, amountInCents);
+ *     
+ *     // TODO 4: Convert the result
+ *     if (success) {
+ *         return PaymentResult.success("TXN-" + System.currentTimeMillis());
+ *     } else {
+ *         return PaymentResult.failure("Payment declined by legacy system");
+ *     }
+ * }
+ * 
+ */
