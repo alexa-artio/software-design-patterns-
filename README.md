@@ -1,5 +1,5 @@
 # software-design-patterns-
-LEGACY CODE ARCHAEOLOGY
+
 ## Purpose
 - Apply pattern recognition to realistic code
 - Practice reading and analyzing unfamiliar codebases
