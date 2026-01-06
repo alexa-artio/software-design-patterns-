@@ -850,39 +850,3 @@ public class Lab2_BridgePattern_ReportGenerator {
  *         currency.format(expenses),
  *         currency.format(profit));
  * }
- * 
- * ═══════════════════════════════════════════════════════════════════════════
- * SOLUTION: HRReport.prepareData() and createFooter()
- * ═══════════════════════════════════════════════════════════════════════════
- * 
- * @Override
- * protected void prepareData() {
- *     headers.clear();
- *     headers.add("Employee Name");
- *     headers.add("Department");
- *     headers.add("Position");
- *     headers.add("Years of Service");
- *     
- *     rows.clear();
- *     employees.sort((a, b) -> a[1].compareTo(b[1]));  // Sort by department
- *     for (String[] emp : employees) {
- *         addRow(emp[0], emp[1], emp[2], emp[3] + " years");
- *     }
- * }
- * 
- * @Override
- * protected String createFooter() {
- *     StringBuilder footer = new StringBuilder();
- *     footer.append("Total Employees: ").append(employees.size());
- *     footer.append(" | By Department: ");
- *     departmentCounts.forEach((dept, count) -> 
- *         footer.append(dept).append("=").append(count).append(" "));
- *     return footer.toString();
- * }
- * 
- */
-
-//    - Returns a Map<String, String> with format name → output
-//    - This demonstrates combining Bridge with other patterns
-//
-// =============================================================================
