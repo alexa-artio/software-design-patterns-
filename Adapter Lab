@@ -1,0 +1,57 @@
+Payment Gateway Adapter
+
+Objective: Create an adapter that allows a modern payment processor interface to work with a legacy credit card API.
+
+Steps:
+1. Create a ModernPaymentProcessor interface with processPayment(amount, currency, cardToken) method
+2. Create a LegacyCreditCardAPI class with chargeCreditCard(cardNumber, expiry, cvv, cents) method
+3. Implement LegacyPaymentAdapter that implements ModernPaymentProcessor but internally uses LegacyCreditCardAPI
+4. The adapter should handle the translation: convert currency amounts to cents, parse the token to extract card details
+5. Test by processing a $99.99 payment through the adapter
+
+Expected Output: Payment of 9999 cents processed successfully through legacy API
+
+
+Starter Code
+// Step 1: Define the modern interface your system uses
+interface ModernPaymentProcessor {
+    PaymentResult processPayment(BigDecimal amount, 
+                                  String currency, 
+                                  String cardToken);
+}
+ 
+// Step 2: This is the legacy API you must adapt
+class LegacyCreditCardAPI {
+    public boolean chargeCreditCard(String cardNumber, 
+                                     String expiry, 
+                                     String cvv, 
+                                     int amountInCents) {
+        System.out.println("Legacy API: Charging " + 
+                           amountInCents + " cents");
+        return true;  // Simulate success
+    }
+}
+ 
+// Step 3: YOUR TASK - Implement this adapter
+class LegacyPaymentAdapter implements ModernPaymentProcessor {
+    private final LegacyCreditCardAPI legacyApi;
+    
+    public LegacyPaymentAdapter(LegacyCreditCardAPI api) {
+        this.legacyApi = api;
+    }
+    
+    @Override
+    public PaymentResult processPayment(BigDecimal amount, 
+                                         String currency, 
+                                         String cardToken) {
+        // TODO: Parse cardToken (format: "cardNum|expiry|cvv")
+        // TODO: Convert amount to cents
+        // TODO: Call legacyApi.chargeCreditCard()
+        // TODO: Return appropriate PaymentResult
+    }
+}
+
+
+Challenge Extension
+Add support for multiple currencies by implementing a currency conversion step in your adapter. USD should pass through unchanged, while EUR amounts should be converted using a 1.1 exchange rate before being sent to the legacy API.
+
