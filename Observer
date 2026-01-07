@@ -1,0 +1,48 @@
+Observer - Real-Time Analytics Event System
+
+*Objective*
+
+Build a high-throughput Observer system for an e-commerce analytics platform that supports event filtering and batched delivery.
+
+Design Pattern: Observer
+
+The Observer pattern defines a one-to-many dependency between objects so that when one object changes state, all its dependents are notified and updated automatically.
+
+Requirements
+
+Event Bus: Create a central EventBus that manages subscriptions and event distribution.
+
+Filtering: Allow observers to subscribe with a Filter (e.g., only listen for "PURCHASE" events or events where "value > 1000").
+
+Batching Logic: Implement a BatchedObserver that waits until $N$ events have occurred or a timeout has passed before processing the notifications in a single group.
+
+Decoupling: Ensure the Subject (Event source) has no knowledge of the concrete implementation of the Observers.
+
+Starter Code
+
+Java
+
+interface AnalyticsObserver {
+    void onEvent(Event e);
+}
+
+class EventBus {
+    private List<Subscription> subscriptions = new ArrayList<>();
+
+    public void publish(Event e) {
+        // TODO: Filter and notify relevant observers
+    }
+}
+
+// Logic for Batching (Advanced)
+class RecommendationEngine implements AnalyticsObserver {
+    private List<Event> buffer = new ArrayList<>();
+    
+    @Override
+    public void onEvent(Event e) {
+        buffer.add(e);
+        if (buffer.size() >= 10) {
+            processBatch();
+        }
+    }
+}
