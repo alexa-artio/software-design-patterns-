@@ -1,0 +1,61 @@
+Objective
+Implement a Proxy pattern to provide access control and performance optimization (lazy initialization) for a protected API service.
+
+Design Pattern: Proxy
+A Proxy acts as an intermediary for another object. This lab demonstrates two common types of proxies:
+
+Protection Proxy: It checks user permissions before allowing access to the real service.
+
+Virtual Proxy: It delays the creation of a resource-intensive object (the "Real Subject") until a valid request is actually made.
+
+Requirements
+Interface Consistency: Both the Proxy and the Real Service must implement the same ApiService interface. The client should not be able to tell if it is talking to the Proxy or the Real Service.
+
+Lazy Initialization: The RealCloudService represents a high-latency connection (e.g., establishing a secure tunnel). The Proxy should only instantiate this service if the user passes the security check and requires data.
+
+Access Control: Use a UserContext object to check if a user has the required permissions. If not, the Proxy should block the call and throw a SecurityException.
+
+Starter Code
+Java
+
+interface ApiService {
+    String getSensitiveData(String resourceId);
+}
+
+// The Real Subject: Resource-heavy and requires protection
+class RealCloudService implements ApiService {
+    public RealCloudService() {
+        // Simulates an expensive operation like an SSL handshake
+        System.out.println("CRITICAL: Establishing high-latency network connection...");
+    }
+
+    @Override
+    public String getSensitiveData(String id) {
+        return "SECURE_DATA_FOR_" + id;
+    }
+}
+
+// The Proxy: Mediates access to the Real Subject
+class SecureApiProxy implements ApiService {
+    private RealCloudService service; 
+    private final UserContext context;
+
+    public SecureApiProxy(UserContext context) {
+        this.context = context;
+    }
+
+    @Override
+    public String getSensitiveData(String resourceId) {
+        // 1. Access Control
+        if (!context.hasPermission("READ_ACCESS")) {
+            throw new SecurityException("Access Denied: Insufficient permissions for " + resourceId);
+        }
+
+        // 2. Lazy Initialization (Virtual Proxy)
+        if (service == null) {
+            service = new RealCloudService();
+        }
+
+        return service.getSensitiveData(resourceId);
+    }
+}
