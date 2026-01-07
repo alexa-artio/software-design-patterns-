@@ -1,0 +1,54 @@
+Chain of Responsibility - Document Processing Pipeline
+Objective
+Implement a Chain of Responsibility to build a modular document ingestion pipeline. The system must process documents through a series of discrete validation and transformation stages.
+
+Design Pattern: Chain of Responsibility
+The Chain of Responsibility allows a request to be passed along a chain of handlers. Upon receiving a request, each handler decides either to process the request or to pass it to the next handler in the chain. This decouples the sender of a request from its receivers.
+
+Requirements
+Handler Abstraction: Create a DocumentHandler base class that manages the reference to the "next" handler in the sequence.
+
+Concrete Handlers: Implement the following stages:
+
+SizeValidator: Rejects files exceeding a specific byte limit.
+
+MalwareScanner: Scans file content for known malicious signatures.
+
+Classifier: Tags the document (e.g., INTERNAL, CONFIDENTIAL) based on keyword analysis.
+
+State Accumulation: The Document object should travel through the chain, accumulating metadata, logs, and status flags as it progresses.
+
+Short-Circuiting: If a validator fails (e.g., malware detected), the chain must stop immediately and return the failure reason.
+
+Starter Code
+Java
+
+class Document {
+    public String fileName;
+    public long size;
+    public String content;
+    public String classification;
+    // TODO: Add processing logs or status flags
+}
+
+abstract class DocumentHandler {
+    protected DocumentHandler next;
+
+    public void setNext(DocumentHandler next) { this.next = next; }
+
+    public abstract void handle(Document doc);
+
+    protected void next(Document doc) {
+        if (next != null) next.handle(doc);
+    }
+}
+
+class SizeValidator extends DocumentHandler {
+    @Override
+    public void handle(Document doc) {
+        if (doc.size > 10 * 1024 * 1024) { // 10MB limit
+            throw new RuntimeException("File too large");
+        }
+        next(doc);
+    }
+}
