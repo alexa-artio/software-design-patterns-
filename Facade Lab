@@ -1,0 +1,62 @@
+Objective
+Implement a Facade pattern to manage the complex, multi-step deployment lifecycle of cloud infrastructure components.
+
+Design Pattern: Facade
+In modern infrastructure, deploying an application involves interacting with several low-level subsystems (Compute, Networking, Storage). A Facade provides a simplified, unified interface to these subsystems, ensuring that the components are initialized in the correct order and reducing the complexity for the end-user.
+
+Requirements
+Lifecycle Management: The DeploymentFacade must orchestrate the following sequence:
+
+Initialize the Network.
+
+Provision Storage.
+
+Apply Security Rules.
+
+Boot the Compute Instance.
+
+Resource Teardown: Implement a decommission() method that releases resources. To ensure system stability, resources should be released in the reverse order of their creation.
+
+Encapsulation: Subsystem details should be managed internally by the Facade, preventing the client from having to deal with the specific configuration of each individual component.
+
+Starter Code
+Java
+
+// Subsystem: Virtual Machines
+class ComputeInstance {
+    public void provision(String imageId) { System.out.println("Provisioning VM from image: " + imageId); }
+    public void stop() { System.out.println("Shutting down VM..."); }
+}
+
+// Subsystem: Networking
+class VirtualNetwork {
+    public void reserveStaticIP() { System.out.println("Static IP allocated."); }
+    public void releaseIP() { System.out.println("Static IP released."); }
+}
+
+// TODO: Implement StorageCluster and SecurityFirewall subsystems
+
+class DeploymentFacade {
+    private final ComputeInstance compute = new ComputeInstance();
+    private final VirtualNetwork network = new VirtualNetwork();
+    // TODO: Add fields for Storage and Security subsystems
+
+    /**
+     * Orchestrates a full stack deployment.
+     */
+    public void deploy(String imageId) {
+        System.out.println(">>> Initializing Deployment Sequence...");
+        network.reserveStaticIP();
+        // TODO: mount storage, apply rules
+        compute.provision(imageId);
+        System.out.println(">>> Deployment Successful.");
+    }
+
+    /**
+     * Reverts the deployment by releasing resources in reverse order.
+     */
+    public void decommission() {
+        System.out.println(">>> Initializing Resource Teardown...");
+        // TODO: Implement reverse-order teardown (Compute -> Rules -> Storage -> Network)
+    }
+}
