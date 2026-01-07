@@ -1,0 +1,51 @@
+Trading Platform Order Management
+
+Objective
+
+Implement the Command pattern to manage financial orders, providing a robust architecture for order execution, audit trails, and undo/redo operations.
+
+Design Pattern : 
+The Command pattern encapsulates a request as an object, thereby letting you parameterize clients with different requests, queue or log requests, and support undoable operations.
+
+Requirements
+Command Interface: Define an interface with execute(), undo(), and getTimestamp().
+
+Concrete Commands: Implement MarketBuy and MarketSell. Each command must store the necessary state (price, quantity, symbol) to revert its action.
+
+Invoker Logic: Create a TradingEngine that maintains a history stack of executed commands.
+
+Replay Functionality: Implement a method to "replay" the state of a portfolio from a specific point in time using the command history.
+
+
+Starter Code
+Java
+
+interface TradeCommand {
+    void execute();
+    void undo();
+    long getTimestamp();
+}
+
+class MarketBuyCommand implements TradeCommand {
+    private Portfolio portfolio;
+    private String symbol;
+    private int quantity;
+    private double priceAtExecution;
+
+    public void execute() {
+        // TODO: Logic to deduct cash and add holdings
+    }
+
+    public void undo() {
+        // TODO: Revert the exact cash and holdings change
+    }
+}
+
+class TradingEngine {
+    private Deque<TradeCommand> history = new ArrayDeque<>();
+    
+    public void process(TradeCommand cmd) {
+        cmd.execute();
+        history.push(cmd);
+    }
+}
