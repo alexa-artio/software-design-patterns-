@@ -1,0 +1,40 @@
+Strategy - Multi-Provider Notification System
+Objective
+Implement a Strategy pattern to route notifications through multiple providers (SendGrid, Twilio, etc.) based on dynamic criteria like cost and reliability.
+
+Design Pattern: Strategy
+The Strategy pattern defines a family of algorithms, encapsulates each one, and makes them interchangeable. Strategy lets the algorithm vary independently from clients that use it.
+
+Requirements
+Strategy Interface: Define a NotificationStrategy with methods for send(), getCost(), and getReliability().
+
+Provider Implementations: Create concrete strategies for different vendors (e.g., SmsTwilio, EmailSendGrid).
+
+Selector Logic: Implement a ProviderSelector that chooses the best strategy at runtime based on a policy (e.g., "Most Reliable" or "Cheapest").
+
+Failover: If the selected strategy fails, the system should be able to switch to a secondary strategy transparently.
+
+Starter Code
+Java
+
+interface NotificationStrategy {
+    void send(String message);
+    double getCost();
+    double getReliability();
+}
+
+class NotificationService {
+    private ProviderSelector selector;
+
+    public void sendNotification(String msg) {
+        // TODO: Use selector to pick the strategy and execute send()
+    }
+}
+
+// Logic: Picks the cheapest provider with reliability > 95%
+class CostOptimizedSelector implements ProviderSelector {
+    public NotificationStrategy select(List<NotificationStrategy> providers) {
+        // TODO: Filter and Sort logic
+        return null; 
+    }
+}
