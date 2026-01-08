@@ -1,0 +1,37 @@
+State - CI/CD Pipeline Execution Engine
+
+Objective
+
+Use the State pattern to manage a CI/CD pipeline where available actions and transitions are governed by the current status of the execution.
+
+Design Pattern: State
+The State pattern allows an object to alter its behavior when its internal state changes. The object will appear to change its class by delegating state-specific behavior to different state objects.
+
+Requirements
+State Interface: Define actions like start(), pause(), approve(), and fail().
+
+State Transitions: Implement concrete classes like RunningState, AwaitingApprovalState, and FailedState.
+
+Validation: If an invalid transition is attempted (e.g., resume() called on a Succeeded pipeline), the system must throw an IllegalStateTransitionException.
+
+Context: The Pipeline object should maintain a reference to the current state and provide a history of transitions for audit purposes.
+
+Starter Code
+Java
+
+interface PipelineState {
+    void start(Pipeline p);
+    void approve(Pipeline p);
+    // ... other transitions
+}
+
+class AwaitingApprovalState implements PipelineState {
+    public void approve(Pipeline p) {
+        System.out.println("Approval received. Moving to Running.");
+        p.transitionTo(new RunningState());
+    }
+
+    public void start(Pipeline p) {
+        throw new IllegalStateException("Pipeline already initialized.");
+    }
+}
