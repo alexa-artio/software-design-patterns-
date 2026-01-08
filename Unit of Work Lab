@@ -1,0 +1,109 @@
+Unit of Work — Transactional Integrity 
+
+Goal
+
+Implement the Unit of Work pattern to ensure atomic transactions across multiple entities in an e-commerce system.
+
+All changes must either commit together or rollback entirely.
+
+Pattern Summary
+
+Unit of Work
+
+Tracks entities involved in a transaction
+
+Coordinates inserts, updates, and deletes
+
+Commits changes as one unit
+
+Restores state on failure
+
+
+Scenario
+
+Placing an order involves:
+
+Creating an Order
+
+Updating product stock
+
+Updating customer loyalty points
+
+If any step fails, nothing must persist.
+
+Your Task
+
+Implement a UnitOfWork that provides:
+
+1. Identity Map
+
+Each entity is loaded once per transaction
+
+Entities tracked by ID
+
+2. Change Tracking
+
+Track entities as:
+
+New – insert
+
+Dirty – update
+
+Deleted – delete
+
+Clean – loaded, unchanged
+
+3. Commit
+
+commit() must:
+
+Insert New entities
+
+Update Dirty entities
+
+Delete Deleted entities
+
+If any step fails → rollback everything.
+
+4. Rollback
+
+Take snapshots before modification
+
+Restore entities if commit fails
+
+5. Resource Safety
+
+If commit() is not called, rollback on close()
+
+Support try-with-resources
+
+Starter Code
+interface IUnitOfWork extends AutoCloseable {
+    void registerNew(Entity e);
+    void registerDirty(Entity e);
+    void registerDeleted(Entity e);
+    void registerClean(Entity e);
+
+    void commit() throws Exception;
+    void rollback();
+}
+
+class UnitOfWork implements IUnitOfWork {
+    Map<String, Entity> identityMap = new HashMap<>();
+    Set<Entity> newEntities = new LinkedHashSet<>();
+    Set<Entity> dirtyEntities = new LinkedHashSet<>();
+    Set<Entity> deletedEntities = new LinkedHashSet<>();
+    Map<String, EntitySnapshot> snapshots = new HashMap<>();
+
+    public void commit() throws Exception {
+        // TODO: atomic commit logic
+    }
+
+    public void rollback() {
+        // TODO: restore from snapshots
+    }
+
+    public void close() {
+        // TODO: rollback if not committed
+    }
+}
