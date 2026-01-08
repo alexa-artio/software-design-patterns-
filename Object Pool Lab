@@ -1,0 +1,143 @@
+Object Pool — High-Performance Resource Management
+
+Goal
+
+Implement the Object Pool pattern to manage a limited set of expensive database connections.
+
+The pool must:
+
+Reuse connections efficiently
+
+Enforce a hard upper limit on resources
+
+Handle concurrent access safely
+
+Prevent resource exhaustion
+
+Pattern Summary
+
+Object Pool
+
+Manages a cache of reusable objects
+
+Avoids repeated expensive creation
+
+Controls resource usage under load
+
+Returns objects to the pool after use
+
+When Object Pool Is Appropriate
+
+Use Object Pool when:
+
+Object creation is expensive (network, auth, memory)
+
+Objects are used frequently and briefly
+
+You must limit concurrent usage (e.g. DB connections)
+
+Scenario
+
+Your application serves many concurrent requests.
+
+Each request needs a DatabaseConnection, but:
+
+Creating a connection is slow
+
+The database allows only a limited number of connections
+
+The pool must efficiently share connections across threads.
+
+Your Task
+
+Implement a thread-safe ConnectionPool with the following responsibilities.
+
+1. Poolable Lifecycle
+
+Each pooled object must support:
+
+Validate – ensure the connection is still usable
+
+Reset – clear session or temporary state
+
+Destroy – close resources when shutting down
+
+2. Connection Pool Logic
+
+Your pool must manage:
+
+Available Objects
+
+Queue of idle connections ready for checkout
+
+In-Use Objects
+
+Set of connections currently borrowed by threads
+
+Elastic Creation
+
+If the pool is empty and below maxPoolSize, create a new connection
+
+Exhaustion Handling
+
+If at maxPoolSize, wait for a connection to be released
+
+Support timeout when waiting
+
+3. Thread Safety
+
+Multiple threads will call acquire() and release()
+
+Use thread-safe collections and atomic counters
+
+No race conditions or duplicate checkouts
+
+4. Automatic Resource Management
+
+Wrap connections in AutoCloseable
+
+Support try-with-resources
+
+Ensure connections are returned to the pool even on failure
+
+Starter Code
+interface ObjectPool<T> {
+    T acquire() throws Exception;
+    T acquire(long timeout, TimeUnit unit) throws Exception;
+    void release(T object);
+    void shutdown();
+
+    int getPoolSize();
+    int getAvailableCount();
+}
+
+class ConnectionPool implements ObjectPool<DatabaseConnection> {
+
+    private final BlockingQueue<DatabaseConnection> available =
+        new LinkedBlockingQueue<>();
+
+    private final Set<DatabaseConnection> inUse =
+        ConcurrentHashMap.newKeySet();
+
+    private final AtomicInteger totalCreated = new AtomicInteger(0);
+
+    // Config: minPoolSize, maxPoolSize, timeout...
+
+    @Override
+    public DatabaseConnection acquire() throws Exception {
+        // TODO:
+        // 1. Try to take from available
+        // 2. If none and below max, create new
+        // 3. If at max, wait (with timeout)
+        // 4. Validate before returning
+        return null;
+    }
+
+    @Override
+    public void release(DatabaseConnection connection) {
+        // TODO:
+        // 1. Remove from inUse
+        // 2. Reset state
+        // 3. Return to available
+    }
+}
